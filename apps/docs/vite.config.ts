@@ -28,7 +28,7 @@ export default defineConfig({
     exclude: ['motion-solidjs'],
   },
   ssr: {
-    noExternal: ['motion-solidjs'],
+    noExternal: ['motion-solidjs', 'flubber'],
   },
   plugins: [
     tailwindcss(),

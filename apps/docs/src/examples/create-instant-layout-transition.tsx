@@ -28,6 +28,7 @@ export default function UseInstantLayoutTransitionExample() {
         <For each={order()}>
           {(color) => (
             <motion.li
+              data-state={order()}
               layout
               transition={{ type: 'spring', stiffness: 300, damping: 22 }}
               class="aspect-square rounded-xl"

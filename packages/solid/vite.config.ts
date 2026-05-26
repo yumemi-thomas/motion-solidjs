@@ -14,6 +14,7 @@ export default defineConfig({
   resolve: { alias: aliases },
   test: {
     passWithNoTests: true,
+    environment: 'node',
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'html'],

@@ -1,6 +1,7 @@
 import path from 'node:path'
 import { defineConfig } from 'vite'
 import { tanstackStart } from '@tanstack/solid-start/plugin/vite'
+import { nitro } from 'nitro/vite'
 import viteSolid from 'vite-plugin-solid'
 import tailwindcss from '@tailwindcss/vite'
 import mdx from '@mdx-js/rollup'
@@ -53,6 +54,7 @@ export default defineConfig({
       }),
     },
     tanstackStart(),
+    nitro(),
     viteSolid({ ssr: true }),
   ],
 })

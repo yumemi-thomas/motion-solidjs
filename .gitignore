@@ -13,3 +13,5 @@ dist
 __screenshots__
 .tanstack
 .vitest-attachments
+.output
+.vercel

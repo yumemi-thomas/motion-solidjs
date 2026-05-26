@@ -1,4 +1,4 @@
-import flubber from 'flubber'
+import { interpolate } from 'flubber'
 import { animate, createMotionValue, createTransform } from 'motion-solidjs'
 import { createEffect, createSignal, onCleanup } from 'solid-js'
 
@@ -30,7 +30,7 @@ export default function SvgPathMorph() {
   const progress = createMotionValue(0)
   const fillMv = createTransform(progress, inputRange, colors)
   const pathMv = createTransform(progress, inputRange, paths, {
-    mixer: (a: string, b: string) => flubber.interpolate(a, b, { maxSegmentLength: 0.1 }),
+    mixer: (a: string, b: string) => interpolate(a, b, { maxSegmentLength: 0.1 }),
   })
 
   // motion.path d={MotionValue} isn't wired in motion-solidjs (the prop

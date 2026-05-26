@@ -1,5 +1,5 @@
-import { wrap } from 'motion-solidjs'
-import { createSignal, For } from 'solid-js'
+import { motion, wrap } from 'motion-solidjs'
+import { createSignal, For, Show } from 'solid-js'
 
 export const meta = {
   slug: 'wrap-fn',
@@ -20,14 +20,16 @@ export default function WrapFnExample() {
     <div class="flex flex-col items-center gap-4">
       <div class="flex gap-2">
         <For each={items}>
-          {(label, i) => (
-            <div
-              class={`h-14 w-14 rounded-2xl border transition-colors ${
-                i() === index()
-                  ? 'border-border bg-grad-violet shadow-glow'
-                  : 'border-border bg-card/40'
-              }`}
-            />
+          {(_, i) => (
+            <div class="relative h-14 w-14 rounded-2xl border border-border bg-card/40">
+              <Show when={i() === index()}>
+                <motion.div
+                  layoutId="wrap-indicator"
+                  class="absolute inset-0 rounded-2xl bg-grad-violet shadow-glow"
+                  transition={{ type: 'spring', stiffness: 380, damping: 28 }}
+                />
+              </Show>
+            </div>
           )}
         </For>
       </div>

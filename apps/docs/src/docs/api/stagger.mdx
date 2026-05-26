@@ -1,0 +1,29 @@
+export const meta = {
+  slug: 'stagger',
+  title: 'stagger',
+  group: 'functions',
+  description:
+    'Generate a per-index delay function for transition.delay or createAnimate selectors.',
+  example: 'stagger-fn',
+}
+
+# stagger
+
+Returns a function that receives each animating element's index and the total count, then returns a
+delay. Use it for enter and exit cascades.
+
+```tsx
+import { animate, stagger } from 'motion-solidjs'
+
+animate('.row', { y: 0, opacity: 1 }, { delay: stagger(0.05, { from: 'first' }) })
+```
+
+<Example slug="stagger-fn" />
+
+## Options
+
+- `from` - `'first' | 'last' | 'center' | number`
+- `startDelay` - additional offset before the cascade begins
+- `ease` - easing applied to the delay distribution
+
+Inside variants, `transition.staggerChildren` is sugar over the same idea.

@@ -1,0 +1,23 @@
+export const meta = {
+  slug: 'create-computed',
+  title: 'createComputed',
+  group: 'primitives',
+  description:
+    'Read multiple motion values inside a getter and expose the result as a new motion value.',
+  example: 'create-computed',
+}
+
+# createComputed
+
+`createComputed` is the motion-value version of `createMemo`: it tracks `.get()` calls inside the
+getter and writes the derived result into a new `MotionValue`.
+
+```tsx
+import { createComputed, createMotionValue } from 'motion-solidjs'
+
+const a = createMotionValue(0)
+const b = createMotionValue(0)
+const product = createComputed(() => a.get() * b.get())
+```
+
+<Example slug="create-computed" />

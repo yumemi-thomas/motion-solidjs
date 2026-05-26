@@ -1,0 +1,28 @@
+export const meta = {
+  slug: 'reorder',
+  title: 'Reorder',
+  group: 'components',
+  description: 'Drag-to-reorder list with built-in layout animations.',
+  example: 'drag-reorder',
+}
+
+# Reorder
+
+`Reorder` is made of two components. `<Reorder.Group>` owns the ordered value array, and
+`<Reorder.Item>` renders each draggable row. When the user drags an item, `onReorder` receives the
+new array order.
+
+<Example slug="drag-reorder" />
+
+## Group props
+
+- `axis` - `'x'` or `'y'`
+- `values` - current array, used to map drag distance to an index
+- `onReorder` - called with the new array order
+- `as` - tag name (default `'ul'`)
+
+## Item props
+
+- `value` - identifier used to look up this row in `values`
+- `drag` - `true | 'x' | 'y'`, defaults to the group's `axis`
+- `as` - tag name (default `'li'`)

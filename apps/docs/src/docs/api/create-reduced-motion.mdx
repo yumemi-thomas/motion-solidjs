@@ -1,0 +1,25 @@
+export const meta = {
+  slug: 'create-reduced-motion',
+  title: 'createReducedMotion',
+  group: 'primitives',
+  description: "A boolean accessor that reflects the user's prefers-reduced-motion setting.",
+  example: 'create-reduced-motion',
+}
+
+# createReducedMotion
+
+Returns an accessor for `(prefers-reduced-motion: reduce)` and updates when the OS setting changes.
+Use it to replace high-motion effects with a calmer state.
+
+```tsx
+import { createReducedMotion, motion } from 'motion-solidjs'
+
+function Hero() {
+  const reduced = createReducedMotion()
+  return (
+    <motion.div animate={reduced() ? { opacity: 1 } : { opacity: 1, scale: 1.05, rotate: 4 }} />
+  )
+}
+```
+
+<Example slug="create-reduced-motion" />

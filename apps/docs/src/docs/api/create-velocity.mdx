@@ -1,0 +1,24 @@
+export const meta = {
+  slug: 'create-velocity',
+  title: 'createVelocity',
+  group: 'primitives',
+  description: 'A motion value tracking the instantaneous velocity of another.',
+  example: 'create-velocity',
+}
+
+# createVelocity
+
+Reads the per-frame velocity of a source `MotionValue`. It is useful for drag effects where skew,
+rotation, or scale should respond to how quickly the user moves.
+
+```tsx
+import { createMotionValue, createTransform, createVelocity, motion } from 'motion-solidjs'
+
+const x = createMotionValue(0)
+const velocity = createVelocity(x)
+const skew = createTransform(velocity, [-1500, 0, 1500], [-25, 0, 25])
+
+return <motion.div drag="x" style={{ x, skewX: skew }} />
+```
+
+<Example slug="create-velocity" />

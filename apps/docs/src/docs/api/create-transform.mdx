@@ -1,0 +1,42 @@
+export const meta = {
+  slug: 'create-transform',
+  title: 'createTransform',
+  group: 'primitives',
+  description:
+    'Derive a new motion value by mapping another through a function or an input/output range.',
+  example: 'create-motion-value',
+}
+
+# createTransform
+
+`createTransform` produces a new `MotionValue` derived from one or more source values. Pass a
+transformer function, or pass input and output ranges and let motion interpolate between them.
+
+```tsx
+import { createMotionValue, createTransform, motion } from 'motion-solidjs'
+
+const x = createMotionValue(0)
+const opacity = createTransform(x, [-100, 0, 100], [0, 1, 0])
+const bg = createTransform(x, [-100, 0, 100], ['#36e0c5', '#7c5cff', '#ff4d8d'])
+
+// Function form
+const angle = createTransform(() => x.get() * 0.4)
+```
+
+<Example slug="parallax" />
+
+## Signatures
+
+```ts
+createTransform<T>(input: MotionValue, transform: (v: any) => T): MotionValue<T>
+createTransform<I, O>(
+  input: MotionValue<I> | MotionValue<I>[],
+  inputRange: I[],
+  outputRange: O[],
+  options?: { clamp?: boolean; ease?: Easing | Easing[]; mixer?: Mixer<O> },
+): MotionValue<O>
+createTransform<O>(transform: () => O, deps?: MotionValue[]): MotionValue<O>
+```
+
+Range form interpolates string colors, numbers, complex strings (e.g. `'1px solid red'`),
+and arrays. `clamp: false` lets the output extrapolate past the bounds.

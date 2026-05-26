@@ -1,0 +1,38 @@
+export const meta = {
+  slug: 'layout-group',
+  title: 'LayoutGroup',
+  group: 'components',
+  description: 'Coordinate layout and layoutId animations across sibling components.',
+  example: 'shared-layout-tabs',
+}
+
+# LayoutGroup
+
+`LayoutGroup` scopes components that share `layoutId` values so they can animate together even when
+they live in different branches of the tree. Use it for shared underlines, sliding pills, and hero
+transitions.
+
+```tsx
+import { LayoutGroup, motion } from 'motion-solidjs'
+
+function Tabs() {
+  return (
+    <LayoutGroup id="tabs">
+      <motion.span layoutId="active" />
+    </LayoutGroup>
+  )
+}
+```
+
+<Example slug="shared-layout-tabs" />
+
+## Props
+
+- `id` - optional namespace; if omitted a stable one is generated
+- `inherit` - `boolean` (default `true`), `'id'`, or `'group'`. `true` inherits both id and group
+  from the surrounding `LayoutGroup`; `'id'` and `'group'` inherit only that half.
+
+## See also
+
+- [`createLayoutGroup`](/docs/create-layout-group) - the primitive
+- [`motion`](/docs/motion) `layout` / `layoutId`

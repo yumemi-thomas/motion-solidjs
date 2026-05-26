@@ -1,0 +1,21 @@
+export const meta = {
+  slug: 'create-follow-value',
+  title: 'createFollowValue',
+  group: 'primitives',
+  description: 'A motion value that follows another with configurable latency.',
+  example: 'create-follow-value',
+}
+
+# createFollowValue
+
+Use `createFollowValue` when one value should trail another with simple damping instead of spring
+physics.
+
+```tsx
+import { createFollowValue, createMotionValue } from 'motion-solidjs'
+
+const x = createMotionValue(0)
+const lag = createFollowValue(x, { speed: 0.1 })
+```
+
+<Example slug="create-follow-value" />

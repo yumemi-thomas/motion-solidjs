@@ -1,0 +1,40 @@
+export const meta = {
+  slug: 'create-cycle',
+  title: 'createCycle',
+  group: 'primitives',
+  description: 'A small state primitive that cycles through a fixed list of values.',
+  example: 'create-cycle',
+}
+
+# createCycle
+
+`createCycle` returns `[state, cycle]` for stepping through a fixed set of values. Calling
+`cycle()` advances to the next value; `cycle(i)` jumps to a specific index.
+
+```tsx
+import { createCycle, motion } from 'motion-solidjs'
+
+const variants = {
+  closed: { opacity: 0, y: -10 },
+  open: { opacity: 1, y: 0 },
+}
+
+function Menu() {
+  const [state, cycle] = createCycle('closed', 'open')
+  return (
+    <>
+      <button onClick={() => cycle()}>Toggle</button>
+      <motion.nav animate={state()} variants={variants} />
+    </>
+  )
+}
+```
+
+<Example slug="create-cycle" />
+
+## API
+
+- `createCycle<T>(...values: T[])` - pass two or more values
+- Returns `[state, cycle]`
+- `cycle()` - move to the next item and wrap at the end
+- `cycle(i)` - jump to index `i`

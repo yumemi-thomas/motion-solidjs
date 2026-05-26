@@ -1,0 +1,32 @@
+export const meta = {
+  slug: 'ssr',
+  title: 'SSR & hydration',
+  group: 'guides',
+  description: 'How motion-solidjs handles server rendering and what to watch for.',
+  order: 5,
+}
+
+# SSR & hydration
+
+motion-solidjs preserves Motion's SSR and hydration behavior. The same state engine that drives
+runtime animations also emits first-paint styles on the server, so an element rendered with
+`initial={{ opacity: 0 }}` reaches the DOM already at opacity 0.
+
+## What to watch for
+
+- **Lazy child evaluation.** motion components do not eagerly read child getters during setup. This
+  means dynamic child accessors only run when motion attaches them. If
+  you depend on the child side-effect, hoist it into the parent.
+- **MDX is not Solid-compiled.** Inside `.mdx`, components written inline are not reactive. See
+  the [Components](/docs/m) page for why. Import the component from a `.tsx` file and use it as a
+  tag instead.
+- **First-paint values.** Initial styles are inlined; if you set `style={{ x: motionValue }}` the
+  initial value of the motion value is used. Set it before render.
+- **CSP nonces.** Pass a `nonce` prop to [`MotionConfig`](/docs/motion-config) to attach it to any
+  injected `<style>` tags.
+
+## Hydration safety
+
+motion-solidjs's `motion.*` outputs are hydration-stable: server and client paint the same string
+representation of the initial transform. If you see a mismatch, ensure no `Date.now()` or
+`Math.random()` leaks into your `initial` or `style`.

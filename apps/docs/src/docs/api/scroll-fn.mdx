@@ -1,0 +1,26 @@
+export const meta = {
+  slug: 'scroll-fn',
+  title: 'scroll',
+  group: 'functions',
+  description: 'Imperative scroll-linked animation driven by a callback or animation controls.',
+  example: 'scroll-fn-imperative',
+}
+
+# scroll
+
+`scroll` is the imperative companion to [`createScroll`](/docs/create-scroll). Pass a callback that
+receives progress from 0 to 1, or pass `AnimationPlaybackControls` from
+[`animate`](/docs/animate) to scrub that animation with scroll.
+
+```tsx
+import { animate, scroll } from 'motion-solidjs'
+
+// Scrub an animate() through scroll
+const controls = animate('.bar', { scaleX: 1 }, { duration: 1 })
+scroll(controls)
+
+// Callback
+scroll((progress) => console.log(progress), { container: '#scroll-area' })
+```
+
+<Example slug="scroll-fn-imperative" />

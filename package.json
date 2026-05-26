@@ -1,0 +1,29 @@
+{
+  "name": "motion-solidjs-workspace",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "vp run -r build",
+    "check": "vp check",
+    "lint": "vp lint",
+    "fmt": "vp fmt",
+    "test": "vp run -r test",
+    "test:client": "vp run -r test:client",
+    "test:browser": "vp run -r test:browser",
+    "test:ssr": "vp run -r test:ssr"
+  },
+  "devDependencies": {
+    "@types/node": "^24.12.4",
+    "@typescript/native-preview": "^7.0.0-dev.20260525.1",
+    "@vitest/coverage-v8": "^4.1.7",
+    "eslint-plugin-solid": "^0.14.5",
+    "vite": "^8.0.14",
+    "vite-plus": "^0.1.22",
+    "vitest": "^4.1.7"
+  },
+  "engines": {
+    "node": ">=24.11.1"
+  },
+  "packageManager": "pnpm@11.3.0"
+}

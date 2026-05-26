@@ -1,0 +1,38 @@
+export const meta = {
+  slug: 'create-motion-value',
+  title: 'createMotionValue',
+  group: 'primitives',
+  description: "A reactive value type that can update outside Solid's signal graph.",
+  example: 'create-motion-value',
+}
+
+# createMotionValue
+
+A `MotionValue` is a reactive value that motion-solidjs can update without rerunning Solid
+components. Read it with `.get()`, write it with `.set()`, and subscribe with `.on('change', cb)`.
+When passed to a `motion.*` `style` prop, the engine writes each frame straight to the DOM.
+
+```tsx
+import { createMotionValue, motion } from 'motion-solidjs'
+
+function Demo() {
+  const x = createMotionValue(0)
+  return <motion.div style={{ x }} drag="x" />
+}
+```
+
+<Example slug="create-motion-value" />
+
+## API
+
+- `createMotionValue(initial)` - create a value
+- `.get()` - read the current value
+- `.set(v)` - update the value and notify subscribers
+- `.on('change' | 'animationStart' | 'animationComplete' | 'animationCancel', cb)` - subscribe
+- `.destroy()` - clean up subscriptions
+
+## See also
+
+- [`createTransform`](/docs/create-transform)
+- [`createSpring`](/docs/create-spring)
+- [`createMotionValueEvent`](/docs/create-motion-value-event)

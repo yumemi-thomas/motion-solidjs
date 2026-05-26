@@ -1,0 +1,26 @@
+export const meta = {
+  slug: 'create-motion-template',
+  title: 'createMotionTemplate',
+  group: 'primitives',
+  description:
+    'A tagged template that interpolates motion values into a single derived string value.',
+  example: 'characters-remaining',
+}
+
+# createMotionTemplate
+
+A tagged template literal that returns a `MotionValue<string>`. Pass any motion values inline; the
+template re-evaluates whenever any of them change. It is suited to CSS values like `transform`,
+`filter`, `clip-path`, or custom properties.
+
+```tsx
+import { createMotionValue, createMotionTemplate, motion } from 'motion-solidjs'
+
+const x = createMotionValue(0)
+const y = createMotionValue(0)
+const transform = createMotionTemplate`translate(${x}px, ${y}px) rotate(${x}deg)`
+
+return <motion.div style={{ transform }} />
+```
+
+<Example slug="characters-remaining" />

@@ -1,0 +1,44 @@
+export const meta = {
+  slug: 'lazy-motion',
+  title: 'LazyMotion',
+  group: 'components',
+  description: 'Load animation features on demand so route bundles stay small.',
+}
+
+# LazyMotion
+
+`LazyMotion` provides animation features to the [`m`](/docs/m) component. Wrap a subtree and pass a
+feature bundle; `m.*` components inside that subtree load only those capabilities.
+
+```tsx
+import { LazyMotion, m, domAnimation } from 'motion-solidjs'
+
+function App() {
+  return (
+    <LazyMotion features={domAnimation}>
+      <m.div animate={{ x: 100 }} />
+    </LazyMotion>
+  )
+}
+```
+
+## Feature bundles
+
+| Bundle         | Includes                                                          |
+| -------------- | ----------------------------------------------------------------- |
+| `domAnimation` | `animate`, `whileHover/Tap/Focus`, variants, exit                 |
+| `domMax`       | Everything in `domAnimation` plus `drag`, `layout`, `whileInView` |
+| `domMin`       | Bare minimum: initial to animate only                             |
+
+Pass a function to load lazily:
+
+```tsx
+<LazyMotion features={() => import('./animations').then((m) => m.default)}>
+  {/* children */}
+</LazyMotion>
+```
+
+## Props
+
+- `features` - feature bundle or async factory
+- `strict` - if `true`, using `motion.*` instead of `m.*` throws

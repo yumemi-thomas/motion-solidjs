@@ -1,0 +1,35 @@
+export const meta = {
+  slug: 'create-drag-controls',
+  title: 'createDragControls',
+  group: 'primitives',
+  description:
+    'Start a drag programmatically when the handle is separate from the draggable element.',
+  example: 'drag-controls',
+}
+
+# createDragControls
+
+`createDragControls` returns a controller for `dragControls`. Call `controls.start(event)` from a
+separate handle's `onPointerDown` to start dragging without making that handle draggable.
+
+```tsx
+import { createDragControls, motion } from 'motion-solidjs'
+
+function Sheet() {
+  const controls = createDragControls()
+  return (
+    <>
+      <button onPointerDown={(e) => controls.start(e)}>Drag</button>
+      <motion.div drag dragListener={false} dragControls={controls} />
+    </>
+  )
+}
+```
+
+<Example slug="drag-controls" />
+
+## API
+
+- `createDragControls()` - returns a controls object
+- `.start(event, options?)` - begins drag; pass the `PointerEvent` from your handler
+- Pair with `dragListener={false}` on the draggable so it ignores its own pointer events

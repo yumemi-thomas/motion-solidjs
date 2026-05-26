@@ -1,0 +1,24 @@
+export const meta = {
+  slug: 'create-animate',
+  title: 'createAnimate',
+  group: 'primitives',
+  description: 'Imperative animation scoped to a ref, usually called from a handler or effect.',
+  example: 'create-animate',
+}
+
+# createAnimate
+
+`createAnimate` returns a `[scope, animate]` tuple. Attach `scope` to a wrapper, then call
+`animate` with elements or selectors inside that wrapper. The returned controls are awaitable, so
+sequences can be written with normal `await` flow.
+
+<Example slug="create-animate" />
+
+## Selector queries
+
+Selectors are resolved inside the scoped ref. That keeps orchestration local without creating a ref
+for every child:
+
+```tsx
+await animate('.card', { y: -10 }, { delay: stagger(0.05) })
+```

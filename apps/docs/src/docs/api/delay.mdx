@@ -1,0 +1,16 @@
+export const meta = {
+  slug: 'delay',
+  title: 'delay',
+  group: 'functions',
+  description: "A cancellable timeout scheduled on motion's shared frame loop.",
+  example: 'delay-fn',
+}
+
+# delay
+
+`delay` is a cancellable `setTimeout` scheduled on motion's frame loop, so it stays aligned with
+animation rendering.
+
+<Example slug="delay-fn" />
+
+`delayInMs` is exported as an alias for files that already have another `delay` in scope.

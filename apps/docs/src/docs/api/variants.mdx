@@ -1,0 +1,29 @@
+export const meta = {
+  slug: 'variants',
+  title: 'Variants',
+  group: 'guides',
+  description: 'Name your animation states, switch by string, and orchestrate the whole subtree.',
+  example: 'variants-basic',
+  order: 1,
+}
+
+# Variants
+
+A variant is a named animation state. Define a map, pass it to `motion.*` with `variants`, then
+drive the tree by passing a label or label array to `animate`, `initial`, `exit`, `whileHover`, and
+related props.
+
+<Example slug="variants-basic" />
+
+## Orchestrate children
+
+Variants propagate through motion children. Define matching labels on a parent and its children,
+then a single `animate="open"` on the parent drives both:
+
+<Example slug="variants-stagger" />
+
+## Dynamic variants
+
+Variants can be functions of a `custom` prop:
+
+<Example slug="variants-dynamic" />

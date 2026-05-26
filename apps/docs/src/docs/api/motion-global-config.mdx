@@ -1,0 +1,29 @@
+export const meta = {
+  slug: 'motion-global-config',
+  title: 'MotionGlobalConfig',
+  group: 'functions',
+  description:
+    'Set app-wide knobs (reduced motion, instant animations, frame rate) without wrapping anything in a provider.',
+}
+
+# MotionGlobalConfig
+
+`MotionGlobalConfig` is a mutable object for app-wide runtime switches. Set it once during startup;
+new animations read the latest values.
+
+```ts
+import { MotionGlobalConfig } from 'motion-solidjs'
+
+MotionGlobalConfig.skipAnimations = true // run animations instantly (tests, SSR)
+MotionGlobalConfig.useManualTiming = true // drive frames yourself for deterministic specs
+```
+
+## Fields
+
+| Field               | Type      | Notes                            |
+| ------------------- | --------- | -------------------------------- |
+| `skipAnimations`    | `boolean` | All animations resolve instantly |
+| `useManualTiming`   | `boolean` | Disables the shared rAF loop     |
+| `instantAnimations` | `boolean` | Force instant on first render    |
+
+> See also: [`MotionConfig`](/docs/motion-config) for declarative provider-scoped overrides.

@@ -1,0 +1,44 @@
+export const meta = {
+  slug: 'gestures',
+  title: 'Gestures',
+  group: 'guides',
+  description: 'whileHover, whileTap, whileFocus, and whileInView gesture variants.',
+  example: 'hover-tap-stack',
+  order: 4,
+}
+
+# Gestures
+
+Every `motion.*` element accepts gesture variants. They take precedence over `animate` while the
+gesture is active and return to the base animation when it ends.
+
+```tsx
+<motion.button
+  whileHover={{ scale: 1.05 }}
+  whileTap={{ scale: 0.95 }}
+  whileFocus={{ boxShadow: '0 0 0 4px var(--ring)' }}
+/>
+```
+
+<Example slug="hover-tap-stack" />
+
+## whileHover, whileTap, whileFocus
+
+These props accept the same target shapes as `animate`: style objects, variant labels, or variant
+functions.
+
+<Example slug="hover" />
+
+## whileInView
+
+Animates the element while it is in the viewport. Add a `viewport` prop to control thresholds,
+margins, and one-time playback.
+
+<Example slug="while-in-view" />
+
+## Pan
+
+For pointer interactions that should not become a draggable element, use `onPan`, `onPanStart`,
+and `onPanEnd`.
+
+<Example slug="pan" />

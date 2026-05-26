@@ -1,0 +1,33 @@
+export const meta = {
+  slug: 'animate-presence',
+  title: 'AnimatePresence',
+  group: 'components',
+  description: 'Animate elements as they are removed from the tree.',
+  example: 'animate-presence-basic',
+}
+
+# AnimatePresence
+
+`AnimatePresence` keeps a leaving child in the DOM long enough for its `exit` animation to finish.
+Wrap the conditional part of the tree, then put `exit` on the child you want to animate out.
+
+<Example slug="animate-presence-basic" />
+
+## Props
+
+- `mode` - `'sync'` (default), `'wait'` (finish exits before entering), or `'popLayout'`
+- `initial` - set to `false` to skip first-mount animations
+- `onExitComplete` - fires after all exiting children finish
+
+```tsx
+<AnimatePresence mode="wait" initial={false} onExitComplete={() => undefined}>
+  {/* conditional child */}
+</AnimatePresence>
+```
+
+<Example slug="animate-presence-wait" />
+
+## See also
+
+- [`usePresence`](/docs/use-presence) - read presence state from a child
+- [Tabs example](/examples/animate-presence-tabs)

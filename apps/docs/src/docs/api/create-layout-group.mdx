@@ -1,0 +1,53 @@
+export const meta = {
+  slug: 'create-layout-group',
+  title: 'createLayoutGroup',
+  group: 'primitives',
+  description:
+    'Primitives behind <LayoutGroup>: read the surrounding group or provide one manually.',
+  example: 'shared-layout-tabs',
+}
+
+# createLayoutGroup
+
+Two primitives back the [`<LayoutGroup>`](/docs/layout-group) component.
+
+## `createLayoutGroup()`
+
+Reads the surrounding layout-group context and returns `{ forceRender }`. Call `forceRender()` to
+remeasure layout-animated descendants after DOM changes the projection tree would not otherwise
+notice, such as route changes or third-party list reorders.
+
+```tsx
+import { createLayoutGroup } from 'motion-solidjs'
+import { onMount } from 'solid-js'
+
+function GalleryShell() {
+  const { forceRender } = createLayoutGroup()
+
+  onMount(() => {
+    window.addEventListener('orientationchange', forceRender)
+  })
+
+  return <Gallery />
+}
+```
+
+## `createLayoutGroupProvider(props)`
+
+The low-level provider half. It establishes a layout-group context for descendants and returns the
+resolved `{ id, group, forceRender, key }`. `<LayoutGroup>` wraps this internally; most apps should
+use the component.
+
+```tsx
+import { createLayoutGroupProvider } from 'motion-solidjs'
+
+function CustomBoundary(props) {
+  createLayoutGroupProvider({ id: 'gallery', inherit: 'group' })
+  return <>{props.children}</>
+}
+```
+
+<Example slug="shared-layout-tabs" />
+
+Use these primitives when you need to compose groups manually or connect a non-component boundary,
+such as a route transition or portal, to the projection tree.

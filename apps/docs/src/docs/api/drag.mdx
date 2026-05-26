@@ -1,0 +1,46 @@
+export const meta = {
+  slug: 'drag',
+  title: 'Drag',
+  group: 'guides',
+  description: 'Make any motion element draggable, then constrain, snap, control or reorder.',
+  example: 'drag-basic',
+  order: 3,
+}
+
+# Drag
+
+`drag` opts a motion element into pointer-based dragging. Pass `true`, `'x'`, or `'y'` and motion
+tracks pointer movement, then applies inertia on release.
+
+```tsx
+<motion.div drag />
+```
+
+<Example slug="drag-basic" />
+
+## Constraints
+
+Constrain with a box, an element ref, or both:
+
+```tsx
+<motion.div drag dragConstraints={{ left: 0, right: 200, top: 0, bottom: 80 }} />
+```
+
+<Example slug="drag-constraints" />
+
+## Snap & momentum
+
+`dragSnapToOrigin` returns the element to its start point after release. `dragMomentum` controls
+post-flick decay, and `dragElastic` controls how far the element can stretch past its constraints.
+
+<Example slug="drag-snap" />
+
+## Reorder a list
+
+[`<Reorder>`](/docs/reorder) builds on drag to provide sortable lists with layout animations.
+
+<Example slug="drag-reorder" />
+
+## See also
+
+- [`createDragControls`](/docs/create-drag-controls) - start a drag from a separate handle

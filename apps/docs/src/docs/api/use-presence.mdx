@@ -1,0 +1,39 @@
+export const meta = {
+  slug: 'use-presence',
+  title: 'usePresence',
+  group: 'primitives',
+  description: 'Read and coordinate presence state inside an AnimatePresence child.',
+  example: 'animate-presence-wait',
+}
+
+# usePresence
+
+Returns `[isPresent, safeToRemove]` for a child inside
+[`<AnimatePresence>`](/docs/animate-presence). Call `safeToRemove` after your own exit work
+finishes to tell the parent it can unmount the child.
+
+```tsx
+import { AnimatePresence, usePresence } from 'motion-solidjs'
+import { createEffect } from 'solid-js'
+
+function Card(props: { ref: (el: HTMLDivElement) => void }) {
+  const [isPresent, safeToRemove] = usePresence()
+
+  createEffect(() => {
+    if (!isPresent()) {
+      // run your exit animation here, then notify the parent to unmount
+      runExitAnimation().then(safeToRemove)
+    }
+  })
+
+  return <div ref={props.ref}>{/* ... */}</div>
+}
+```
+
+`isPresent` is a reactive accessor, so call it like a function. `safeToRemove` is a no-op until
+the parent `<AnimatePresence>` has flagged the child for removal.
+
+<Example slug="animate-presence-wait" />
+
+Related: [`useIsPresent`](/docs/use-presence) (boolean-only), [`usePresenceData`](/docs/use-presence)
+(read custom data passed via `<AnimatePresence custom={...}>`).

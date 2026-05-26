@@ -1,0 +1,32 @@
+export const meta = {
+  slug: 'create-spring',
+  title: 'createSpring',
+  group: 'primitives',
+  description: 'Smooth a motion value or static value with a spring.',
+  example: 'create-spring',
+}
+
+# createSpring
+
+`createSpring` returns a new `MotionValue` that follows its source with spring physics. Pass a
+`MotionValue` to track it, or pass a number to create a writable spring you can drive with `.set()`.
+
+```tsx
+import { createMotionValue, createSpring, motion } from 'motion-solidjs'
+
+const x = createMotionValue(0)
+const springX = createSpring(x, { stiffness: 200, damping: 22 })
+
+return <motion.div style={{ x: springX }} />
+```
+
+<Example slug="create-spring" />
+
+## Options
+
+- `stiffness` - spring stiffness (default 100)
+- `damping` - damping coefficient (default 10)
+- `mass` - particle mass (default 1)
+- `velocity` - initial velocity
+- `restSpeed`, `restDelta` - stop conditions
+- `bounce`, `duration` - alternative parameterization

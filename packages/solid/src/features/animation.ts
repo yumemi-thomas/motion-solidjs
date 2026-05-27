@@ -689,6 +689,8 @@ export function createAnimation(
   state: MotionHandle,
   getOpts: () => MotionHandle['options'],
 ): () => void {
+  if (state.options.motionConfig?.isStatic) return undefined
+
   // The state machine itself runs VE-free, but motion-dom's variant
   // cascade walks `ve.variantChildren` — every participant needs a VE for
   // a parent's animateVariant dispatch to reach children that inherit via
@@ -759,9 +761,13 @@ export function createAnimation(
   }
 
   // Defer animateChanges to a microtask so gesture/projection/layout
-  // bindings land first.
+  // bindings land first, then gate on connection: during CSR route changes
+  // the element may still be off-document, and motion-dom's keyframes
+  // resolver can't read baseline values from a disconnected element —
+  // opacity (and other style-read properties) would stay stuck at their
+  // initial. `onConnected` runs immediately when already connected.
   queueMicrotask(() => {
-    if (state.isMounted()) runInitialAnimation()
+    if (state.isMounted()) state.onConnected(runInitialAnimation)
   })
 
   let prevAnimate: unknown

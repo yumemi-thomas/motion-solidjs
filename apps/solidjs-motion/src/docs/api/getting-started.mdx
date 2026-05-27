@@ -1,0 +1,45 @@
+export const meta = {
+  slug: 'getting-started',
+  title: 'Getting started',
+  group: 'guides',
+  description: 'Install motion-solidjs and animate your first element.',
+  order: 0,
+}
+
+# Getting started
+
+motion-solidjs brings the Motion API to SolidJS: `motion.div`, `Presence`, variants, gestures,
+and Solid-native primitives such as `createMotionValue`, `createTransform`, and `createSpring`.
+
+## Install
+
+<InstallCommand pkg="motion-solidjs" />
+
+motion-solidjs ships compiled output, so `vite-plugin-solid` does not need to process the package
+again. Install it like a normal dependency in Solid 1.x or 2.x projects.
+
+## Hello, motion
+
+```tsx
+import { motion } from 'solidjs-motion'
+
+export function App() {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      hover={{ scale: 1.05 }}
+      transition={{ type: 'spring', stiffness: 320, damping: 18 }}
+    />
+  )
+}
+```
+
+<Example slug="hover" />
+
+## What to read next
+
+- [Variants](/docs/variants) - name states and orchestrate children
+- [Layout animations](/docs/layout-animations) - `layout` and `layoutId`
+- [`createMotionValue`](/docs/create-motion-value) - the value type behind most primitives
+- [Drag](/docs/drag) - gestures with constraints, momentum, and reorder

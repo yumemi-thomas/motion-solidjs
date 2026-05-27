@@ -65,22 +65,40 @@ export interface MotionHandle {
   setActive(name: StateType, isActive: boolean): Promise<void>
   unmount(): void
   setElement(element: HTMLElement | SVGElement | null): void
+  /**
+   * Run `fn` once the element is connected to the document. Fires
+   * synchronously if already connected, otherwise defers until a
+   * disconnected→connected transition is observed (see {@link createMotionHandle}).
+   *
+   * Features doing DOM-dependent setup at mount (animation dispatch, layout
+   * measurement) must gate that work through this hook: during CSR route
+   * changes Solid builds the subtree off-document before inserting it, so the
+   * element is not yet connected at `onMount`/effect time.
+   */
+  onConnected(fn: () => void): void
   updateFeatures(): void
   initVisualElement(renderer: VisualElementRenderer): void
   ensureVisualElement(): VisualElement<Element> | undefined
   getValueRegistry(): ValueRegistry
   attachStyleWriter(mv: MotionValue): void
   setStyleMotionValue(key: string, mv: MotionValue): void
+  setStyleStaticValue(key: string, value: unknown): void
 
   // ---- Extension slots (writable) -----------------------------------------
   getSnapshot: GetSnapshotHook
   didUpdate: DidUpdateHook
   _replayHook?: () => void
+  _staticReplayHook?: () => void
   _animationUpdateHook?: () => void
 }
 
 /** Public registry for tests and cross-subtree feature lookup. */
 export const mountedStates = new WeakMap<Element, MotionHandle>()
+
+// Leak guard for the connection poll (~1s at 60fps). The realistic path
+// connects within a frame or two; this only bounds a subtree that is created
+// but never inserted.
+const MAX_CONNECTION_FRAMES = 60
 
 type HandleOptions = Options & {
   presenceContext?: PresenceContext
@@ -137,6 +155,47 @@ function createMotionHandle(
   let isExiting = false
   let presenceContainer: HTMLElement | null = null
   let isInitialMountPending = false
+
+  // --- Connection gate -----------------------------------------------------
+  // There is no native "connected to document" event for regular elements,
+  // so we detect a disconnected→connected transition by polling rAF. The
+  // poll is capped purely as a leak guard; in practice the router inserts the
+  // subtree within a frame or two. `detach()` cancels it.
+  let connectionRaf: number | undefined
+  let connectionFrames = 0
+  const connectedCallbacks: Array<() => void> = []
+  const flushConnected = () => {
+    const callbacks = connectedCallbacks.splice(0)
+    for (const cb of callbacks) cb()
+  }
+  const watchConnection = () => {
+    if (connectionRaf !== undefined) return
+    if (typeof requestAnimationFrame === 'undefined') {
+      flushConnected()
+      return
+    }
+    const tick = () => {
+      connectionRaf = undefined
+      if (!element) {
+        connectedCallbacks.length = 0
+        return
+      }
+      if (element.isConnected || ++connectionFrames > MAX_CONNECTION_FRAMES) {
+        flushConnected()
+        return
+      }
+      connectionRaf = requestAnimationFrame(tick)
+    }
+    connectionRaf = requestAnimationFrame(tick)
+  }
+  const onConnected = (fn: () => void) => {
+    if (element && element.isConnected) {
+      fn()
+      return
+    }
+    connectedCallbacks.push(fn)
+    watchConnection()
+  }
   let getSnapshot: GetSnapshotHook = () => {}
   let didUpdate: DidUpdateHook = () => {}
   const type: 'html' | 'svg' = isSVGElement(options.as) ? 'svg' : 'html'
@@ -155,6 +214,11 @@ function createMotionHandle(
   }
   const setStyleMotionValue = (key: string, mv: MotionValue): void => {
     getValueRegistry().setExternal(key, mv)
+    attachStyleWriter(mv)
+    visualLifecycle.get()?.addValue(key, mv)
+  }
+  const setStyleStaticValue = (key: string, value: unknown): void => {
+    const mv = getValueRegistry().setStatic(key, value)
     attachStyleWriter(mv)
     visualLifecycle.get()?.addValue(key, mv)
   }
@@ -210,6 +274,13 @@ function createMotionHandle(
     updateFeatures()
   }
 
+  const replayStaticTree = () => {
+    replayInitialAnimation()
+    for (const child of children) {
+      child._staticReplayHook?.()
+    }
+  }
+
   let presenceRegistration: PresenceRegistration | undefined
   let hasAttached = false
 
@@ -233,7 +304,6 @@ function createMotionHandle(
     isInitialMountPending = true
     updateFeatures()
     queueMicrotask(() => {
-      if (element) pruneDisconnectedChildren(visualLifecycle.get())
       queueMicrotask(() => {
         isInitialMountPending = false
       })
@@ -245,6 +315,11 @@ function createMotionHandle(
   const detach = () => {
     parent?.children.delete(handle)
     if (element) mountedStates.delete(element)
+    if (connectionRaf !== undefined && typeof cancelAnimationFrame !== 'undefined') {
+      cancelAnimationFrame(connectionRaf)
+    }
+    connectionRaf = undefined
+    connectedCallbacks.length = 0
     presenceRegistration?.unregister()
     styleWriter.dispose()
     featureBindings?.dispose()
@@ -268,6 +343,8 @@ function createMotionHandle(
       options = next
       visualLifecycle.update(next)
       visualLifecycle.syncForcedStyleValues(next)
+      visualLifecycle.render()
+      if (next.motionConfig?.isStatic) replayStaticTree()
     })
   })
 
@@ -369,6 +446,7 @@ function createMotionHandle(
     },
     setActive,
     unmount: detach,
+    onConnected,
 
     setElement,
     updateFeatures,
@@ -377,6 +455,8 @@ function createMotionHandle(
     getValueRegistry,
     attachStyleWriter,
     setStyleMotionValue,
+    setStyleStaticValue,
+    _staticReplayHook: replayStaticTree,
   }
 
   parent?.children.add(handle)

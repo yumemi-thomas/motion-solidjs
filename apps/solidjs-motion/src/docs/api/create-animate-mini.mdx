@@ -1,0 +1,38 @@
+export const meta = {
+  slug: 'create-animate-mini',
+  title: 'createAnimateMini',
+  group: 'primitives',
+  description:
+    'Minimal sibling of createAnimate. It keeps only the WAAPI subset for smaller bundles.',
+  example: 'create-animate-mini',
+}
+
+# createAnimateMini
+
+<Todo>
+  solidjs-motion doesn't ship a separate WAAPI-only `createAnimateMini` (deferred to v0.3+); the
+  re-exported `animate` drives the same sequences.
+</Todo>
+
+`createAnimateMini` has the same `[scope, animate]` shape as
+[`createAnimate`](/docs/create-animate), but it uses the WAAPI-only `animateMini` path. It does not
+include springs, inertia, or timeline scrubbing.
+
+```tsx
+import { createAnimateMini } from 'solidjs-motion'
+
+function Toast() {
+  const [scope, animate] = createAnimateMini<HTMLDivElement>()
+  const dismiss = () => animate(scope.current!, { opacity: 0, y: -8 }, { duration: 0.2 })
+
+  return (
+    <div ref={scope}>
+      <button onClick={dismiss}>Close</button>
+    </div>
+  )
+}
+```
+
+Use it when bundle size matters and linear or cubic-bezier easing is enough.
+
+<Example slug="create-animate-mini" />

@@ -1,0 +1,47 @@
+export const meta = {
+  slug: 'animate',
+  title: 'animate',
+  group: 'functions',
+  description:
+    'Imperatively animate elements, values, or generators. This is the standalone counterpart to motion.*.',
+  example: 'animate-fn',
+  order: 0,
+}
+
+# animate
+
+`animate` starts an animation without rendering a `motion.*` component. Pass an element, selector,
+or `MotionValue`, then provide the target keyframes and optional transition. It returns
+`AnimationPlaybackControls`, which can be paused, cancelled, completed, or awaited.
+
+```tsx
+import { animate } from 'solidjs-motion'
+
+const controls = animate(
+  '.card',
+  { y: -20, opacity: 1 },
+  {
+    type: 'spring',
+    stiffness: 320,
+    damping: 18,
+  },
+)
+
+await controls
+controls.cancel()
+```
+
+<Example slug="animate-fn" />
+
+## Signatures
+
+```ts
+animate(element | selector | motionValue, keyframes, transition?)
+animate(from, to, options) // tween between two raw values
+animate(generator) // run a custom generator
+```
+
+## See also
+
+- [`createAnimate`](/docs/create-animate) - scoped, ref-based version
+- [`spring`](/docs/spring) - pure spring generator

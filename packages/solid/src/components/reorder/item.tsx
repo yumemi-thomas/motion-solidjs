@@ -50,6 +50,9 @@ export default function Item<V>(props: SolidReorderItemProps<V>) {
   return (
     <Motion
       as={props.as ?? 'li'}
+      // Mirror framer-motion: suppress the native HTML5 drag image so it can't
+      // fight the pointer-driven reorder. Omitted when dragging is disabled.
+      draggable={props.dragListener === false ? undefined : false}
       layout={props.layout ?? true}
       layoutDependency={context.values?.()}
       drag={props.drag ?? axis()}

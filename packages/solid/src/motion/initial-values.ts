@@ -36,11 +36,23 @@ function resolveInitialVariant(
   definition?: Options['animate'],
   variants?: Options['variants'],
   custom?: Options['custom'],
+  takeLast = false,
 ): VariantType | undefined {
   const resolved = resolveVariant(definition, variants, custom)
   if (!resolved) return undefined
   const { transition, transitionEnd, ...target } = resolved
-  return { ...target, ...transitionEnd }
+  const merged: Record<string, unknown> = { ...target, ...transitionEnd }
+  // Collapse keyframe arrays to a single initial value — the first keyframe
+  // normally, or the last when the initial animation is blocked (initial=false
+  // / suppressed by Presence) so the element paints at the end-of-animation
+  // state. Mirrors framer-motion's makeLatestValues.
+  for (const key in merged) {
+    const value = merged[key]
+    if (Array.isArray(value)) {
+      merged[key] = value[takeLast ? value.length - 1 : 0]
+    }
+  }
+  return merged as VariantType
 }
 
 export function resolveInitialValues(
@@ -52,14 +64,19 @@ export function resolveInitialValues(
   if (options.presenceContext?.initial === false) {
     initial = false
   }
-  const sources: Array<'initial' | 'animate'> =
-    initial === false ? ['initial', 'animate'] : ['initial']
+  const isInitialAnimationBlocked = initial === false
+  const sources: Array<'initial' | 'animate'> = isInitialAnimationBlocked
+    ? ['initial', 'animate']
+    : ['initial']
   const custom = options.custom ?? options.presenceContext?.custom
   const resolved: ResolvedValues = {}
   for (const variant of sources) {
     const definition = options[variant] || context?.[variant]
     if (typeof definition === 'boolean') continue
-    Object.assign(resolved, resolveInitialVariant(definition, options.variants, custom))
+    Object.assign(
+      resolved,
+      resolveInitialVariant(definition, options.variants, custom, isInitialAnimationBlocked),
+    )
   }
 
   const styleSnapshot: ResolvedValues = {}

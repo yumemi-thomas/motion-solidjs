@@ -1,0 +1,24 @@
+export const meta = {
+  slug: 'create-time',
+  title: 'createTime',
+  group: 'primitives',
+  description: 'A motion value that ticks with the document timeline.',
+  example: 'create-time',
+}
+
+# createTime
+
+Returns a `MotionValue<number>` that updates every frame with `performance.now()`-style timestamps.
+Combine it with [`createTransform`](/docs/create-transform) for time-based loops.
+
+```tsx
+import { createTime, createTransform, motion } from 'solidjs-motion'
+
+function Spinner() {
+  const time = createTime()
+  const rotate = createTransform(time, [0, 4000], [0, 360], { clamp: false })
+  return <motion.div style={{ rotate }} />
+}
+```
+
+<Example slug="create-time" />

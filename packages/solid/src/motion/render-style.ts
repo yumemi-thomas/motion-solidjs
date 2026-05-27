@@ -8,6 +8,7 @@ import {
 import type { HTMLRenderState, ResolvedValues, SVGRenderState } from 'motion-dom'
 
 import type { MotionStyleProps } from '@/types'
+import type { MotionProps } from '@/components/motion'
 
 export type MotionStyleValue = MotionStyleProps[string]
 
@@ -48,9 +49,12 @@ export function dashToCamel(str: string) {
   return str.replace(/-([a-z])/g, (_, letter: string) => letter.toUpperCase())
 }
 
-export function buildSolidHTMLStyle(latestValues: MotionStyleProps): MotionStyleProps | null {
+export function buildSolidHTMLStyle(
+  latestValues: MotionStyleProps,
+  transformTemplate?: MotionProps['transformTemplate'],
+): MotionStyleProps | null {
   const state = createHTMLRenderState()
-  buildHTMLStyles(state, toResolvedValues(latestValues))
+  buildHTMLStyles(state, toResolvedValues(latestValues), transformTemplate)
   const result: MotionStyleProps = { ...state.style }
   for (const key in state.vars) {
     result[key] = state.vars[key]
@@ -62,9 +66,10 @@ export function buildSolidSVGAttrs(
   latestValues: MotionStyleProps,
   tag: string,
   styleProp?: MotionStyleProps,
+  transformTemplate?: MotionProps['transformTemplate'],
 ): { attrs: Record<string, MotionStyleValue>; style: MotionStyleProps } {
   const state = createSVGRenderState()
-  buildSVGAttrs(state, toResolvedValues(latestValues), isSVGTag(tag), undefined, styleProp)
+  buildSVGAttrs(state, toResolvedValues(latestValues), isSVGTag(tag), transformTemplate, styleProp)
   const attrs: Record<string, MotionStyleValue> = {}
   for (const key in state.attrs) {
     const attrKey = camelCaseAttributes.has(key) ? key : camelToDash(key)

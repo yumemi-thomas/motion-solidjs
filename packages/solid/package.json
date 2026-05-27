@@ -1,6 +1,6 @@
 {
   "name": "motion-solidjs",
-  "version": "0.1.0",
+  "version": "0.1.5",
   "description": "Motion-compatible animation primitives for SolidJS",
   "keywords": [
     "motion",
@@ -52,9 +52,10 @@
   },
   "devDependencies": {
     "@solidjs/testing-library": "^0.8.10",
+    "@testing-library/jest-dom": "^6.9.1",
     "@vitest/browser": "4.1.7",
     "@vitest/browser-playwright": "^4.1.7",
-    "happy-dom": "^16.8.1",
+    "jsdom": "^29.1.1",
     "motion": "^12.40.0",
     "motion-dom": "^12.40.0",
     "motion-utils": "^12.39.0",

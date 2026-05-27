@@ -80,6 +80,19 @@ export function createProjection(
   if (!isSSR) {
     initProjection()
     projection?.mount(state.element)
+    // During CSR route changes Solid builds the subtree off-document before
+    // inserting it, so every layout measurement scheduled in the mount window
+    // is skipped by the `updateLayout` guard above and never retried once
+    // connected. Layout callbacks (`onLayoutMeasure`, which Reorder uses to
+    // register item positions) then never fire. If we mounted while detached,
+    // force a measurement once the element connects.
+    if (state.element && !state.element.isConnected) {
+      state.onConnected(() => {
+        if (!projection) return
+        projection.isLayoutDirty = true
+        projection.updateLayout()
+      })
+    }
   }
 
   createEffect(() => {

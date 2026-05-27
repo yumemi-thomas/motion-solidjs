@@ -1,0 +1,32 @@
+export const meta = {
+  slug: 'create-motion-value-event',
+  title: 'createMotionValueEvent',
+  group: 'primitives',
+  description:
+    'Subscribe to lifecycle events on a motion value: change, animationStart, animationComplete, or animationCancel.',
+  example: 'create-motion-value-event',
+}
+
+# createMotionValueEvent
+
+Subscribes to one of a `MotionValue`'s event types and disposes the subscription with the component.
+
+```tsx
+import { createMotionValueEvent, createScroll } from 'solidjs-motion'
+
+function ProgressLogger() {
+  const { scrollYProgress } = createScroll()
+  createMotionValueEvent(scrollYProgress, 'change', (latest) => {
+    console.log('scroll', latest)
+  })
+  return null
+}
+```
+
+<Example slug="create-motion-value-event" />
+
+## Event types
+
+- `'change'` - value changed
+- `'animationStart'` / `'animationComplete'` / `'animationCancel'` - animation lifecycle
+- `'renderRequest'` - a frame was requested

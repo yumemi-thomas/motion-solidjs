@@ -1,0 +1,37 @@
+{
+  "name": "@solidjs-motion/docs",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "sideEffects": false,
+  "scripts": {
+    "dev": "vite dev",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@mdx-js/rollup": "^3.1.0",
+    "@shikijs/rehype": "^4.1.0",
+    "@tanstack/solid-router": "^1.170.4",
+    "@tanstack/solid-start": "^1.168.6",
+    "flubber": "^0.4.2",
+    "motion": "^12.40.0",
+    "motion-dom": "^12.40.0",
+    "motion-utils": "^12.39.0",
+    "shiki": "^4.1.0",
+    "solid-js": "^1.9.10",
+    "solid-jsx": "^1.1.4",
+    "solidjs-motion": "^0.2.2",
+    "valibot": "^1.4.0"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.2.2",
+    "@types/mdx": "^2.0.13",
+    "@types/node": "^24.12.4",
+    "@typescript/native-preview": "^7.0.0-dev.20260525.1",
+    "nitro": "3.0.260522-beta",
+    "remark-gfm": "^4.0.1",
+    "tailwindcss": "^4.2.2",
+    "vite-plugin-solid": "^2.11.11"
+  }
+}

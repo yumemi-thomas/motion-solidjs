@@ -1,0 +1,38 @@
+export const meta = {
+  slug: 'create-in-view',
+  title: 'createInView',
+  group: 'primitives',
+  description: 'Track whether an element is inside the viewport or a custom root.',
+  example: 'create-in-view',
+}
+
+# createInView
+
+Returns a boolean accessor that changes when the target enters or leaves the viewport or a custom
+root. Use `inView` for visual state on a `motion.*` element; use `createInView` when the
+visibility state needs to drive other logic.
+
+```tsx
+import { createInView } from 'solidjs-motion'
+import { createSignal, createEffect } from 'solid-js'
+
+function Section() {
+  const [el, setEl] = createSignal<HTMLElement | null>(null)
+  const inView = createInView(el, { amount: 0.5, once: true })
+
+  createEffect(() => {
+    if (inView()) trackImpression()
+  })
+
+  return <section ref={setEl}>{/* content */}</section>
+}
+```
+
+<Example slug="create-in-view" />
+
+## Options
+
+- `root` - accessor returning the scroll root
+- `margin` - `IntersectionObserver` root margin
+- `amount` - `'some' | 'all' | number` (0-1), controlling how much must be visible
+- `once` - stop observing after the first entry

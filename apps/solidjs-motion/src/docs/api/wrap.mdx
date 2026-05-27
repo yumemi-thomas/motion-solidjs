@@ -1,0 +1,28 @@
+export const meta = {
+  slug: 'wrap',
+  title: 'wrap',
+  group: 'functions',
+  description: 'Wrap a number around a min/max range for repeating animations.',
+  example: 'wrap-fn',
+}
+
+# wrap
+
+<Todo>
+  solidjs-motion doesn't re-export `wrap`; import it from the engine: `import {wrap} from
+  'motion-utils'`.
+</Todo>
+
+`wrap` is a math utility re-exported from `motion-utils`. It wraps a number into a circular range,
+so going past the maximum returns to the minimum.
+
+```ts
+import { wrap } from 'solidjs-motion'
+
+wrap(0, 10, 12) // 2
+wrap(-1, 1, 1.4) // -0.6
+```
+
+<Example slug="wrap-fn" />
+
+Use it with keyframed sequences that need a looping counter or circular cursor.

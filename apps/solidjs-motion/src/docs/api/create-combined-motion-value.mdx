@@ -1,0 +1,39 @@
+export const meta = {
+  slug: 'create-combined-motion-value',
+  title: 'createCombinedMotionValue',
+  group: 'primitives',
+  description:
+    'Low-level: derive a MotionValue from a computation and explicitly subscribe its sources.',
+  example: 'create-combined-motion-value',
+}
+
+# createCombinedMotionValue
+
+<Todo>
+  solidjs-motion has no `createCombinedMotionValue`. The example combines sources by hand with
+  `createMotionValue` + `createMotionValueEvent`.
+</Todo>
+
+`createCombinedMotionValue` returns a `MotionValue<T>` whose value is recomputed from a getter
+whenever one of its subscribed sources changes. You wire those sources explicitly with
+`subscribe(values)`.
+
+```tsx
+import { createCombinedMotionValue, createMotionValue, createTransform } from 'solidjs-motion'
+
+const x = createMotionValue(0)
+const y = createMotionValue(0)
+
+const { value: combined, subscribe } = createCombinedMotionValue(() => [x.get(), y.get()] as const)
+subscribe([x, y])
+
+const distance = createTransform(combined, ([cx, cy]) => Math.hypot(cx, cy))
+```
+
+<Example slug="create-combined-motion-value" />
+
+The returned object also exposes `unsubscribe()` and `updateValue()` for custom reactivity layers.
+
+> Most code should use a higher-level helper first. [`createComputed`](/docs/create-computed)
+> auto-tracks dependencies, [`createTransform`](/docs/create-transform) maps one value, and
+> [`createTemplate`](/docs/create-motion-template) interpolates into a string.

@@ -25,6 +25,14 @@ describe('focus behavior', () => {
     const wrapper = render(() => (
       <Motion
         whileFocus={{ scale: 1.2, boxShadow: '0 0 0 2px #ff0088' }}
+        // boxShadow needs a declared base for it to revert on blur. framer only
+        // reverts a removed key to its base (initial/style/MotionValue); a
+        // base-less key resolves to `null` → getFinalKeyframe([null,null]) →
+        // undefined → no change (it is NOT reset). So we declare the base here,
+        // mirroring framer's own focus test which reverts `opacity` via a
+        // MotionValue with a base. (scale is a transform → reverts to its
+        // built-in default with no declared base needed.)
+        style={{ boxShadow: 'none' }}
         transition={{ duration: 0 }}
         data-testid="motion"
       />
@@ -41,6 +49,7 @@ describe('focus behavior', () => {
     fireEvent.blur(el)
     await delay(50)
     expect(el.style.transform).toBe('none')
-    expect(el.style.boxShadow).not.toBe('0 0 0 2px #ff0088')
+    // Reverts to the declared base (framer's revert-to-base behavior).
+    expect(el.style.boxShadow).toBe('none')
   })
 })

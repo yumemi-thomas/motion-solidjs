@@ -1,0 +1,33 @@
+export const meta = {
+  slug: 'create-animation-frame',
+  title: 'createAnimationFrame',
+  group: 'primitives',
+  description: "Subscribe a callback to motion's shared animation-frame loop.",
+  example: 'create-animation-frame',
+}
+
+# createAnimationFrame
+
+<Todo>
+  solidjs-motion has no `createAnimationFrame`. The example uses a plain `requestAnimationFrame`
+  loop in `onMount`/`onCleanup`.
+</Todo>
+
+Runs a function on motion-solidjs's shared frame loop. Use it instead of a local
+`requestAnimationFrame` when the callback reads or writes values that motion also manages.
+
+```tsx
+import { createAnimationFrame, createMotionValue } from 'solidjs-motion'
+
+function Ticker() {
+  const t = createMotionValue(0)
+  createAnimationFrame((timestamp, delta) => {
+    t.set(t.get() + delta)
+  })
+  return <span>{t.get().toFixed(0)}</span>
+}
+```
+
+<Example slug="create-animation-frame" />
+
+The callback receives `(timestamp, delta)`. Return early when you want to skip a frame.

@@ -34,6 +34,7 @@ export default function MotionConfig(props: SolidMotionConfigProps) {
       resolveTransition(props.transition, parentConfig().transition) ?? parentConfig().transition,
     reducedMotion: props.reducedMotion ?? defaultConfig.reducedMotion,
     nonce: props.nonce ?? parentConfig().nonce,
+    isStatic: props.isStatic ?? parentConfig().isStatic,
     // Inherit parent's transformPagePoint unless overridden. Consumed by
     // pan/drag via visualElement.getTransformPagePoint().
     transformPagePoint: props.transformPagePoint ?? parentConfig().transformPagePoint,

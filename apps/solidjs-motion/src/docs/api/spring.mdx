@@ -1,0 +1,29 @@
+export const meta = {
+  slug: 'spring',
+  title: 'spring',
+  group: 'functions',
+  description: 'A pure spring generator for animate() and transition.path-style use cases.',
+  example: 'spring-fn',
+}
+
+# spring
+
+`spring({...})` returns a generator function you can pass directly to `animate()` or a `motion.*`
+transition. Use it when you need direct control over spring physics beyond
+`transition={{ type: 'spring' }}`.
+
+```tsx
+import { animate, spring } from 'solidjs-motion'
+
+animate(element, { x: 200 }, spring({ stiffness: 280, damping: 18 }))
+```
+
+<Example slug="spring-fn" />
+
+## Options
+
+- `stiffness` (default 100)
+- `damping` (default 10)
+- `mass` (default 1)
+- `velocity` - initial velocity
+- `bounce`, `duration` - declarative parameterization

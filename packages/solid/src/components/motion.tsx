@@ -89,10 +89,21 @@ export type MotionComponent = <T extends AsTag = 'div', K = any>(
 // ---------------------------------------------------------------------------
 
 type MotionCompProps = {
-  create: <T extends DefineComponent | string>(
+  // Intrinsic element tag, e.g. motion.create('div').
+  create<T extends keyof JSX.IntrinsicElements>(
     component: T,
     options?: MotionCreateOptions,
-  ) => DefineComponent<Omit<MotionProps<any, unknown>, 'as'> & ComponentProps<T>>
+  ): DefineComponent<Omit<MotionProps<T, unknown>, 'as'> & MotionHTMLAttributes<T>>
+  // Custom component, e.g. motion.create(MyComponent).
+  create<T extends DefineComponent>(
+    component: T,
+    options?: MotionCreateOptions,
+  ): DefineComponent<Omit<MotionProps<any, unknown>, 'as'> & ComponentProps<T>>
+  // Unknown string tag (custom element): generic motion-aware HTML attributes.
+  create(
+    component: string,
+    options?: MotionCreateOptions,
+  ): DefineComponent<Omit<MotionProps<any, unknown>, 'as'> & MotionHTMLAttributes<'div'>>
 }
 
 export interface MotionCreateOptions {

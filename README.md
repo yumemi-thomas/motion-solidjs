@@ -29,11 +29,11 @@ export function Example() {
 
 ## Repository layout
 
-| Path                                                | Description                                                |
-| --------------------------------------------------- | ---------------------------------------------------------- |
-| [`packages/solid`](./packages/solid)                | The `motion-solidjs` library (published to npm).           |
-| [`apps/docs`](./apps/docs)                          | Documentation site (SolidJS + TanStack Start).             |
-| [`apps/react-examples`](./apps/react-examples)      | Reference Motion-for-React examples used to validate parity. |
+| Path                                           | Description                                                  |
+| ---------------------------------------------- | ------------------------------------------------------------ |
+| [`packages/solid`](./packages/solid)           | The `motion-solidjs` library (published to npm).             |
+| [`apps/docs`](./apps/docs)                     | Documentation site (SolidJS + TanStack Start).               |
+| [`apps/react-examples`](./apps/react-examples) | Reference Motion-for-React examples used to validate parity. |
 
 ## Development
 

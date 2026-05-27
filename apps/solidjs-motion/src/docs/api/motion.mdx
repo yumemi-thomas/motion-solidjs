@@ -1,0 +1,51 @@
+export const meta = {
+  slug: 'motion',
+  title: 'motion',
+  group: 'components',
+  description:
+    'The animated DOM component. Pass animation props directly on any HTML or SVG element.',
+  example: 'hover',
+  order: 0,
+}
+
+# motion
+
+Every HTML and SVG tag has a `motion.*` counterpart. These components accept normal element props
+plus animation props such as `initial`, `animate`, `transition`, `hover`, `press`,
+`inView`, `drag`, `layout`, and `variants`.
+
+```tsx
+import { motion } from 'solidjs-motion'
+
+function Demo() {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      hover={{ scale: 1.05 }}
+      transition={{ type: 'spring', stiffness: 320, damping: 18 }}
+    />
+  )
+}
+```
+
+<Example slug="hover" />
+
+## Props
+
+`motion` accepts every HTML/SVG attribute plus motion-specific props:
+
+- `initial` - starting style; pass `false` to skip the mount animation
+- `animate` - target style or variant label
+- `exit` - style applied when leaving an `<Presence>` tree
+- `transition` - `tween`, `spring`, or `inertia` options
+- `hover` / `press` / `focus` / `inView` - gesture variants
+- `drag` - `true`, `'x'`, or `'y'` to make the element draggable
+- `layout` / `layoutId` - opt into layout animations
+- `variants` - named variant map for parent-child orchestration
+
+## See also
+
+- [`m`](/docs/m) - tree-shakeable variant for use with `LazyMotion`
+- [`Presence`](/docs/animate-presence) - animate elements as they leave the tree
+- [`useMotion`](/docs/use-motion) - the primitive behind `motion.*`

@@ -1,0 +1,38 @@
+export const meta = {
+  slug: 'animate-presence',
+  title: 'Presence',
+  group: 'components',
+  description: 'Animate elements as they are removed from the tree.',
+  example: 'animate-presence-basic',
+}
+
+# Presence
+
+<Todo>
+  solidjs-motion's `Presence` (the rename of `AnimatePresence`) supports only `mode="sync"` and
+  `mode="wait"` — there's no `popLayout`.
+</Todo>
+
+`Presence` keeps a leaving child in the DOM long enough for its `exit` animation to finish.
+Wrap the conditional part of the tree, then put `exit` on the child you want to animate out.
+
+<Example slug="animate-presence-basic" />
+
+## Props
+
+- `mode` - `'sync'` (default), `'wait'` (finish exits before entering), or `'popLayout'`
+- `initial` - set to `false` to skip first-mount animations
+- `onExitComplete` - fires after all exiting children finish
+
+```tsx
+<Presence mode="wait" initial={false} onExitComplete={() => undefined}>
+  {/* conditional child */}
+</Presence>
+```
+
+<Example slug="animate-presence-wait" />
+
+## See also
+
+- [`usePresence`](/docs/use-presence) - read presence state from a child
+- [Tabs example](/examples/animate-presence-tabs)

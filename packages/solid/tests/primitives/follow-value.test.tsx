@@ -105,6 +105,38 @@ describe('createFollowValue — tracks source changes', () => {
   })
 })
 
+describe('createFollowValue — accessor source', () => {
+  it('seeds from an accessor', () => {
+    let x!: MotionValue<number>
+    render(() => {
+      const [n] = createSignal(5)
+      x = createFollowValue(() => n())
+      return null
+    })
+    expect(x.get()).toBe(5)
+  })
+
+  it('retargets when the accessor signal changes', async () => {
+    const samples: number[] = []
+    let follower!: MotionValue<number>
+    let setN!: (n: number) => void
+
+    render(() => {
+      const [n, _setN] = createSignal(0)
+      setN = _setN
+      follower = createFollowValue(() => n())
+      follower.on('change', (v) => samples.push(v))
+      onMount(() => setN(100))
+      return null
+    })
+
+    await delay(500)
+    expect(samples.length).toBeGreaterThan(1)
+    expect(samples[0]).not.toBe(0)
+    expect(samples[0]).not.toBe(100)
+  })
+})
+
 describe('createFollowValue — animation events', () => {
   it('fires animationStart when the source moves', async () => {
     let started = false

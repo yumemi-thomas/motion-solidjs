@@ -1,0 +1,38 @@
+export const meta = {
+  slug: 'motion-config',
+  title: 'MotionConfig',
+  group: 'components',
+  description: 'Provide a default transition and reduced-motion behavior to a subtree.',
+  example: 'repeat-reverse',
+}
+
+# MotionConfig
+
+`MotionConfig` sets defaults inherited by descendant `motion.*` components. Use it to share a
+single `transition`, override `reducedMotion`, or provide a `nonce` for SSR styles.
+
+```tsx
+import { MotionConfig, motion } from 'solidjs-motion'
+
+function App() {
+  return (
+    <MotionConfig transition={{ type: 'spring', stiffness: 220, damping: 22 }}>
+      {/* every motion.* below shares this default */}
+      <motion.div animate={{ rotate: 360 }} />
+    </MotionConfig>
+  )
+}
+```
+
+<Example slug="repeat-reverse" />
+
+## Props
+
+- `transition` - default transition applied to every animation
+- `reducedMotion` - `'user' | 'always' | 'never'` to opt the subtree in or out of reduced motion
+- `nonce` - CSS nonce forwarded to injected `<style>` tags (CSP)
+
+## See also
+
+- [`createReducedMotionConfig`](/docs/create-reduced-motion-config)
+- [`motionGlobalConfig`](/docs/motion-global-config) - app-wide knobs without provider wrapping

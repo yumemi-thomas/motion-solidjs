@@ -2,8 +2,8 @@ import { isForcedMotionValue, isMotionValue } from 'motion-dom'
 
 import type { MotionProps } from '@/components/motion'
 import type { MotionStyleProps } from '@/types'
-import { isSSR } from '@/utils/is'
 import type { MotionHandle } from './create-motion'
+import { resolveInitialValues } from './initial-values'
 import {
   buildSolidHTMLStyle,
   buildSolidSVGAttrs,
@@ -75,6 +75,8 @@ function applyHTMLStyleValues(
     styleProps[key] = value
     if (isMotionValue(value)) {
       state.setStyleMotionValue(motionKey, value)
+    } else if (state.getValueRegistry().has(motionKey)) {
+      state.setStyleStaticValue(motionKey, value)
     } else if (state.visualElement) {
       state.visualElement.getValue(motionKey)?.jump(value, false)
     }
@@ -102,7 +104,7 @@ function addDragStyles(styleProps: MotionStyleProps, props: MotionProps) {
 
 function buildFinalStyle(
   styleProps: MotionStyleProps,
-  styleProp: MotionStyleProps,
+  transformTemplate: MotionProps['transformTemplate'],
   isSVG: boolean,
 ) {
   if (isSVG) {
@@ -113,18 +115,7 @@ function buildFinalStyle(
     return kebab
   }
 
-  const mvKeys = new Set<string>()
-  for (const key in styleProp) {
-    if (isMotionValue(styleProp[key])) mvKeys.add(key)
-  }
-  if (mvKeys.size > 0 && !isSSR) {
-    const filtered: MotionStyleProps = {}
-    for (const key in styleProps) {
-      if (!mvKeys.has(key)) filtered[key] = styleProps[key]
-    }
-    return buildSolidHTMLStyle(filtered) ?? {}
-  }
-  return buildSolidHTMLStyle(styleProps) ?? {}
+  return buildSolidHTMLStyle(styleProps, transformTemplate) ?? {}
 }
 
 export function buildMotionAttrs(options: {
@@ -135,7 +126,9 @@ export function buildMotionAttrs(options: {
 }) {
   const isSVG = options.state.type === 'svg'
   const attrsProps = resolveAttrValues(options.attrs)
-  const currentValues = options.state.visualElement?.latestValues || options.state.latestValues
+  const currentValues = options.motionProps.motionConfig?.isStatic
+    ? resolveInitialValues(options.motionProps, options.state.context)
+    : options.state.visualElement?.latestValues || options.state.latestValues
   const styleProp = options.props.style || {}
   let styleProps: MotionStyleProps = isSVG ? { ...styleProp } : { ...currentValues }
 
@@ -146,17 +139,32 @@ export function buildMotionAttrs(options: {
   styleProps = resolveStyleMotionValues(styleProps)
 
   if (isSVG) {
+    // Keep raw user CSS (non-MotionValue, non-transform) in `style` rather than
+    // letting motion-dom's buildSVGAttrs turn every non-transform value into an
+    // SVG attribute (it does `state.attrs = state.style` for non-root SVG tags).
+    // Mirrors framer-motion's copyRawValuesOnly: transform shortcuts (x/y/scale)
+    // and MotionValues still route through buildSVGAttrs to become transform/attrs.
+    const rawCss: MotionStyleProps = {}
+    const svgInput: MotionStyleProps = { ...currentValues }
+    for (const key in styleProps) {
+      const isRawCss =
+        !isMotionValue(styleProp[key]) &&
+        !isForcedStyleMotionValue(dashToCamel(key), options.motionProps)
+      if (isRawCss) rawCss[key] = styleProps[key]
+      else svgInput[key] = styleProps[key]
+    }
     const { attrs: svgAttrs, style: svgStyle } = buildSolidSVGAttrs(
-      { ...currentValues, ...styleProps },
+      svgInput,
       getTagName(options.state.options.as),
       options.props.style,
+      options.motionProps.transformTemplate,
     )
     Object.assign(attrsProps, svgAttrs)
-    styleProps = svgStyle
+    styleProps = { ...rawCss, ...svgStyle }
   }
 
   addDragStyles(styleProps, options.props)
-  attrsProps.style = buildFinalStyle(styleProps, styleProp, isSVG)
+  attrsProps.style = buildFinalStyle(styleProps, options.motionProps.transformTemplate, isSVG)
   return attrsProps
 }
 

@@ -1,0 +1,39 @@
+export const meta = {
+  slug: 'layout-animations',
+  title: 'Layout animations',
+  group: 'guides',
+  description: 'Animate any layout change automatically with layout and layoutId.',
+  example: 'shared-layout-tabs',
+  order: 2,
+}
+
+# Layout animations
+
+Set `layout` on a `motion.*` element to animate size or position changes. Motion measures the
+before and after boxes, then animates the difference.
+
+```tsx
+<motion.div layout class={open() ? 'expanded' : 'collapsed'} />
+```
+
+<Example slug="layout-basic" />
+
+## Shared layout
+
+Give two motion elements the same `layoutId` to animate between them, even across components or
+routes. Pair it with `<LayoutGroup>` or `<Presence>` for tabs, expanding cards, and shared
+hero transitions.
+
+```tsx
+<motion.span layoutId="active-pill" />
+```
+
+<Example slug="shared-layout-tabs" />
+
+## Caveats
+
+- Layout animations need measurable ancestors; `position: relative | absolute | fixed` is safest.
+- A direct child of a `layout` element cannot itself be `position: absolute`; use `motion.div` with
+  `style={{ position: 'absolute' }}` and `layoutId` instead.
+
+See also: [`LayoutGroup`](/docs/layout-group), [`createInstantLayoutTransition`](/docs/create-instant-layout-transition).

@@ -14,7 +14,11 @@ export default defineConfig({
   resolve: { alias: aliases },
   test: {
     passWithNoTests: true,
-    environment: 'node',
+    environment: 'jsdom',
+    globals: true,
+    setupFiles: ['./tests/setup.ts'],
+    include: ['tests/**/*.test.{ts,tsx}'],
+    exclude: ['node_modules', 'tests/ssr/**', 'tests/browser/**'],
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'html'],
@@ -25,13 +29,14 @@ export default defineConfig({
         resolve: { alias: aliases },
         test: {
           name: 'client',
-          environment: 'happy-dom',
+          environment: 'jsdom',
           globals: true,
+          setupFiles: ['./tests/setup.ts'],
           include: ['tests/**/*.test.{ts,tsx}'],
           // SSR tests live under tests/ssr/ and run as the `ssr` project below
           // (node environment + vite-plugin-solid in ssr mode). Browser tests
-          // run as the `browser` project. Excluding them keeps the client
-          // suite clean.
+          // run as the `browser` project. Excluding them keeps the client suite
+          // clean.
           exclude: ['node_modules', 'tests/ssr/**', 'tests/browser/**'],
         },
       },

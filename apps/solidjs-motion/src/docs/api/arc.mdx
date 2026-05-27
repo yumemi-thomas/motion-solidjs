@@ -1,0 +1,36 @@
+export const meta = {
+  slug: 'arc',
+  title: 'arc',
+  group: 'functions',
+  description:
+    'A transition.path generator that curves between keyframes instead of moving in a straight line.',
+  example: 'transition-arc',
+}
+
+# arc
+
+<Todo>
+  solidjs-motion doesn't re-export `arc`; import it from the engine: `import {arc} from
+  'motion-dom'`.
+</Todo>
+
+`arc()` returns a `PathInterpolator` for a transition's `path` property. Use it when an element
+should travel through a curve instead of a straight line between keyframes.
+
+```tsx
+import { arc, motion } from 'solidjs-motion'
+
+const path = arc({ strength: 1 })
+
+return <motion.div animate={{ x: 220 }} transition={{ duration: 1, path }} />
+```
+
+<Example slug="transition-arc" />
+
+## Options
+
+- `strength` - how much the path bows (0 = straight, 1 = pronounced)
+- `rotate` - rotate the element to face the tangent
+
+Create the interpolator once and reuse it across renders. It keeps internal state for the dominant
+axis.

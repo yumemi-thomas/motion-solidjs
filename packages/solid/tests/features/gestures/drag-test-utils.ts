@@ -32,6 +32,16 @@ function makePointerEvent(
   // pageX/pageY, and PanSession.extractEventInfo reads from `page*`.
   Object.defineProperty(event, 'pageX', { configurable: true, value: x })
   Object.defineProperty(event, 'pageY', { configurable: true, value: y })
+  // jsdom's PointerEvent constructor drops the pointer-specific init fields, so
+  // motion-dom's isPrimaryPointer (reads pointerType/isPrimary/button) rejects
+  // the event and gestures never activate. Re-assert them (no-op under happy-dom,
+  // which already preserves them).
+  Object.defineProperty(event, 'pointerType', { configurable: true, value: pointerType })
+  Object.defineProperty(event, 'isPrimary', { configurable: true, value: true })
+  Object.defineProperty(event, 'pointerId', { configurable: true, value: 1 })
+  if (typeof event.button !== 'number') {
+    Object.defineProperty(event, 'button', { configurable: true, value: 0 })
+  }
   return event
 }
 

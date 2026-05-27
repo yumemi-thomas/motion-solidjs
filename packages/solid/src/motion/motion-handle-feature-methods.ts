@@ -8,6 +8,7 @@
 import {
   hasReducedMotionListener,
   initPrefersReducedMotion,
+  type AnyResolvedKeyframe,
   type MotionValue,
   prefersReducedMotion,
 } from 'motion-dom'
@@ -61,9 +62,10 @@ function getSystemReducedMotion(): boolean {
 export function getAnimationMotionValue(
   handle: MotionHandle,
   key: string,
-  fallback: unknown,
+  fallback: AnyResolvedKeyframe | null | undefined,
 ): MotionValue {
-  const fromVE = handle.visualElement?.values.get(key)
+  const visualElement = handle.visualElement
+  const fromVE = visualElement?.values.get(key)
   const registry = handle.getValueRegistry()
   const fromRegistry = registry.get(key)
   if (fromVE) {
@@ -71,13 +73,15 @@ export function getAnimationMotionValue(
     // consumers find the MV without going through the VE.
     if (!fromRegistry) {
       registry.setExternal(key, fromVE)
-      handle.attachStyleWriter(fromVE)
     }
     return fromVE
   }
+  if (visualElement) {
+    const value = visualElement.getValue(key, fallback)
+    registry.setExternal(key, value)
+    return value
+  }
   if (fromRegistry) {
-    // Registry has it but VE hasn't seen it yet — mirror over.
-    handle.visualElement?.addValue(key, fromRegistry)
     return fromRegistry
   }
   const mv = registry.getOrCreateTransient(key, fallback)

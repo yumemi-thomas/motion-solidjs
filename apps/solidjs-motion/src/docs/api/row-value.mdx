@@ -1,0 +1,26 @@
+export const meta = {
+  slug: 'row-value',
+  title: 'RowValue',
+  group: 'components',
+  description: "Render a MotionValue's current value as text without a manual subscription.",
+  example: 'row-value-counter',
+}
+
+# RowValue
+
+<Todo>
+solidjs-motion has no `<RowValue>` component. Its MotionValues are Solid accessors — render one inline by calling it: `{mv()}`.
+</Todo>
+
+`RowValue` renders a `MotionValue` as text and updates whenever the value changes. Use it for
+animated counters, scroll progress, drag offsets, and other readouts that would otherwise need
+`value.on('change', ...)` plus a signal.
+
+<Example slug="row-value-counter" />
+
+## Props
+
+- `value` - the `MotionValue` to read. Required.
+
+The value is coerced with `String(...)` for rendering, so any scalar `MotionValue<T>` works. Wrap
+with `createTransform` first if you want to format (e.g. `Math.round` for integer counters).

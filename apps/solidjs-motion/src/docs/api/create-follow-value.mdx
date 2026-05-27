@@ -1,0 +1,26 @@
+export const meta = {
+  slug: 'create-follow-value',
+  title: 'createFollowValue',
+  group: 'primitives',
+  description: 'A motion value that follows another with configurable latency.',
+  example: 'create-follow-value',
+}
+
+# createFollowValue
+
+<Todo>
+  solidjs-motion has no `createFollowValue`. The example builds a tween-follow with
+  `createMotionValue` + `createMotionValueEvent` + `animate` (or use `createSpring`).
+</Todo>
+
+Use `createFollowValue` when one value should trail another with simple damping instead of spring
+physics.
+
+```tsx
+import { createFollowValue, createMotionValue } from 'solidjs-motion'
+
+const x = createMotionValue(0)
+const lag = createFollowValue(x, { speed: 0.1 })
+```
+
+<Example slug="create-follow-value" />

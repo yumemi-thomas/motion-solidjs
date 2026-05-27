@@ -17,7 +17,7 @@ import {
 import { motionValue, isMotionValue as isMV } from 'motion-dom'
 import type { MotionValue as MV } from 'motion-dom'
 
-import { type MaybeAccessor, resolveAccessor } from '@/types'
+import { type MaybeAccessor, isAccessor, resolveAccessor } from '@/types'
 
 // ---------- Animation-frame helper (only consumer of `frame.update` here) ----------
 type FrameCallback = (timestamp: number, delta: number) => void
@@ -86,7 +86,9 @@ export function createCombinedMotionValue<T>(combineValues: () => T) {
 
 /**
  * Combine multiple motion values into a single string-valued motion value
- * using template-literal syntax.
+ * using template-literal syntax. Interpolated values may be `MotionValue`s,
+ * plain numbers/strings, or Solid accessors (`() => value`) — accessors make
+ * that segment of the template update reactively.
  *
  * ```tsx
  * const shadowX = createSpring(0)
@@ -100,8 +102,11 @@ export function createCombinedMotionValue<T>(combineValues: () => T) {
  */
 export function createMotionTemplate(
   fragments: TemplateStringsArray,
-  ...values: Array<MotionValue | number | string>
+  ...values: Array<MaybeAccessor<string | number> | MotionValue>
 ) {
+  // Accessors become driver MotionValues so the combined value can subscribe.
+  const resolved = values.map((value) => (isAccessor(value) ? bridgeAccessor(value) : value))
+
   /**
    * Build the string by interleaving the literal fragments with the current
    * value of each interpolated motion value.
@@ -113,7 +118,7 @@ export function createMotionTemplate(
 
     for (let i = 0; i < numFragments; i++) {
       output += fragments[i]
-      const value = values[i]
+      const value = resolved[i]
       if (value !== undefined && value !== null) {
         output += isMotionValue(value) ? value.get() : value
       }
@@ -123,7 +128,7 @@ export function createMotionTemplate(
   }
   const { value, subscribe } = createCombinedMotionValue(buildValue)
 
-  subscribe(values.filter(isMotionValue))
+  subscribe(resolved.filter(isMotionValue))
 
   return value
 }
@@ -259,28 +264,66 @@ export function createVelocity(value: MotionValue<number>): MotionValue<number> 
 type AnyResolvedKeyframe = string | number
 
 /**
+ * Bridges a Solid accessor into a driver `MotionValue` that re-reads the
+ * accessor inside a tracked effect, so any MotionValue consumer downstream
+ * updates whenever the accessor's reactive dependencies change.
+ *
+ * The read lives in its own effect on purpose. For follow/spring sources this
+ * means the in-flight animation keeps its momentum — feeding the accessor
+ * straight into the `attachFollow` effect would tear down and re-create the
+ * animation on every change, restarting it and dropping spring velocity.
+ */
+function bridgeAccessor<T extends AnyResolvedKeyframe>(accessor: () => T): MV<T> {
+  const driver = motionValue(accessor())
+  createEffect(() => {
+    driver.set(accessor())
+  })
+
+  return driver
+}
+
+/**
+ * Normalises a follow `source` into something `attachFollow` can track. A
+ * Solid accessor (`() => value`) is bridged into a driver `MotionValue`;
+ * plain values and existing `MotionValue`s pass through untouched.
+ */
+function resolveFollowSource<T extends AnyResolvedKeyframe>(
+  source: MaybeAccessor<T> | MV<T>,
+): T | MV<T> {
+  return isAccessor(source) ? bridgeAccessor(source) : source
+}
+
+/**
  * Returns a `MotionValue` that tracks `source` through the animation defined
  * by `options` (any transition shape: tween, spring, inertia, …). When
  * `options` is a getter the follow is re-attached as the config changes.
+ *
+ * `source` may be a plain value, a `MotionValue`, or a Solid accessor
+ * (`() => value`) — passing an accessor makes the follow retarget reactively.
  *
  * @example
  * ```tsx
  * const x = createMotionValue(0)
  * const smoothX = createFollowValue(x, { type: 'tween', duration: 0.3 })
  *
+ * // Reactive accessor source
+ * const [pct, setPct] = createSignal(0)
+ * const smoothPct = createFollowValue(() => pct(), { type: 'tween', duration: 0.3 })
+ *
  * return <motion.div style={{ x: smoothX }} />
  * ```
  */
 export function createFollowValue<T extends AnyResolvedKeyframe>(
-  source: T | MV<T>,
+  source: MaybeAccessor<T> | MV<T>,
   options: MaybeAccessor<FollowValueOptions> = {},
 ) {
-  const value = motionValue(isMV(source) ? source.get() : source)
+  const resolved = resolveFollowSource(source)
+  const value = motionValue(isMV(resolved) ? resolved.get() : resolved)
 
   let cleanup: VoidFunction | undefined
 
   createEffect(() => {
-    cleanup = attachFollow(value, source, resolveAccessor(options))
+    cleanup = attachFollow(value, resolved, resolveAccessor(options))
     onCleanup(() => {
       cleanup?.()
     })
@@ -291,14 +334,20 @@ export function createFollowValue<T extends AnyResolvedKeyframe>(
 
 /**
  * Spring-smoothed `MotionValue` that follows `source`. `source` may be a
- * plain value (becomes the spring target) or another `MotionValue` (the
- * spring chases its current value). `config` may be a getter — passing a
- * reactive config re-attaches the spring with the new physics.
+ * plain value (becomes the spring target), another `MotionValue` (the spring
+ * chases its current value), or a Solid accessor (`() => value`) — passing an
+ * accessor retargets the spring reactively as its dependencies change.
+ * `config` may be a getter — passing a reactive config re-attaches the spring
+ * with the new physics.
  *
  * @example
  * ```tsx
  * const x = createMotionValue(0)
  * const smoothX = createSpring(x, { stiffness: 200, damping: 20 })
+ *
+ * // Reactive accessor source
+ * const [text, setText] = createSignal('')
+ * const ratio = createSpring(() => text().length / LIMIT, { stiffness: 200, damping: 24 })
  *
  * return (
  *   <motion.div
@@ -309,21 +358,22 @@ export function createFollowValue<T extends AnyResolvedKeyframe>(
  * ```
  */
 export function createSpring(
-  source: MV<string> | string,
-  config?: MaybeAccessor<SpringOptions>,
-): MV<string>
-export function createSpring(
-  source: MV<number> | number,
+  source: MaybeAccessor<number> | MV<number>,
   config?: MaybeAccessor<SpringOptions>,
 ): MV<number>
 export function createSpring(
-  source: MV<string> | MV<number> | string | number,
+  source: MaybeAccessor<string> | MV<string>,
+  config?: MaybeAccessor<SpringOptions>,
+): MV<string>
+export function createSpring(
+  source: MaybeAccessor<string | number> | MV<string> | MV<number>,
   config: MaybeAccessor<SpringOptions> = {},
 ) {
-  const value = motionValue(isMV(source) ? source.get() : source)
+  const resolved = resolveFollowSource(source)
+  const value = motionValue(isMV(resolved) ? resolved.get() : resolved)
 
   createEffect(() => {
-    const cleanup = attachFollow(value, source, { type: 'spring', ...resolveAccessor(config) })
+    const cleanup = attachFollow(value, resolved, { type: 'spring', ...resolveAccessor(config) })
     onCleanup(() => {
       cleanup?.()
     })

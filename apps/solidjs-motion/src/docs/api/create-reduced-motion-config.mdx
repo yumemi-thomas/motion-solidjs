@@ -1,0 +1,37 @@
+export const meta = {
+  slug: 'create-reduced-motion-config',
+  title: 'createReducedMotionConfig',
+  group: 'primitives',
+  description:
+    "Read the effective reduced-motion preference, factoring in MotionConfig's override.",
+  example: 'create-reduced-motion-config',
+}
+
+# createReducedMotionConfig
+
+<Todo>
+  solidjs-motion has no `createReducedMotionConfig`. The example combines
+  `useMotionConfig().reducedMotion()` with `createReducedMotion()`.
+</Todo>
+
+Returns an `Accessor<boolean | null>` that resolves the nearest [`MotionConfig`](/docs/motion-config)'s
+`reducedMotion` setting against the OS-level `prefers-reduced-motion` query:
+
+- `'never'` returns `false`
+- `'always'` returns `true`
+- `'user'` (or no override) returns the OS preference
+
+```tsx
+import { createReducedMotionConfig, motion } from 'solidjs-motion'
+
+function Card() {
+  const shouldReduce = createReducedMotionConfig()
+
+  return <motion.div animate={{ x: 100 }} transition={{ duration: shouldReduce() ? 0 : 0.6 }} />
+}
+```
+
+Use this primitive when you need to read the resolved preference inside a component. To _set_ the
+mode, render a [`<MotionConfig reducedMotion="...">`](/docs/motion-config) higher in the tree.
+
+<Example slug="create-reduced-motion-config" />

@@ -13,10 +13,9 @@ const LIMIT = 60
 
 export default function CharactersRemaining() {
   const [text, setText] = createSignal('')
-  const ringRatio = createSpring(0, { stiffness: 200, damping: 24 })
-
-  createEffect(() => {
-    ringRatio.set(Math.min(1, text().length / LIMIT))
+  const ringRatio = createSpring(() => Math.min(1, text().length / LIMIT), {
+    stiffness: 200,
+    damping: 24,
   })
 
   const onInput = (e: Event) => {

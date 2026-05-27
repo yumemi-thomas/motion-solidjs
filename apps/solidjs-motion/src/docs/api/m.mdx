@@ -1,0 +1,46 @@
+export const meta = {
+  slug: 'm',
+  title: 'm',
+  group: 'components',
+  description: 'Tree-shakeable sibling of motion.* for LazyMotion feature loading.',
+  order: 1,
+}
+
+# m
+
+<Todo>
+  solidjs-motion doesn't provide the `m` component (it pairs with `LazyMotion`, deferred to v0.3+).
+  Use `motion.*` instead.
+</Todo>
+
+`m` mirrors the [`motion`](/docs/motion) API but ships without built-in animation features. Wrap
+your tree with [`<LazyMotion features={domAnimation} />`](/docs/lazy-motion) or `domMax` so
+features are loaded through a provider instead of bundled with every `motion.X` import.
+
+```tsx
+import { LazyMotion, m, domAnimation } from 'solidjs-motion'
+
+function App() {
+  return (
+    <LazyMotion features={domAnimation}>
+      <m.div animate={{ opacity: 1 }} initial={{ opacity: 0 }} />
+    </LazyMotion>
+  )
+}
+```
+
+## Why `m` instead of `motion`?
+
+Importing `motion` brings the full `domMax` feature set. `m` stays featureless until a
+`LazyMotion` provider loads capabilities above it, which makes route-level feature splitting
+possible.
+
+| Component | Bundles features? | Use when                             |
+| --------- | ----------------- | ------------------------------------ |
+| `motion`  | Yes (`domMax`)    | One-page apps, prototyping           |
+| `m`       | No                | You want fine-grained bundle control |
+
+## See also
+
+- [`LazyMotion`](/docs/lazy-motion)
+- [`motion`](/docs/motion)

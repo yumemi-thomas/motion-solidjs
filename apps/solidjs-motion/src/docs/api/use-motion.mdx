@@ -1,0 +1,44 @@
+export const meta = {
+  slug: 'use-motion',
+  title: 'useMotion',
+  group: 'primitives',
+  description: 'Apply motion props to any element without using a motion.* wrapper.',
+  example: 'animated-button',
+  order: 0,
+}
+
+# useMotion
+
+`useMotion` is the primitive behind every `motion.*` component. It returns a getter that merges
+regular element props with motion props, plus a `<Provider>` for variant propagation. Use it when a
+Solid component owns its own `ref` or needs to compose motion behavior manually.
+
+```tsx
+import { useMotion } from 'solidjs-motion'
+
+function Panel(props: { open: boolean }) {
+  const m = useMotion(() => ({
+    initial: { opacity: 0 },
+    animate: { opacity: props.open ? 1 : 0 },
+    transition: { duration: 0.2 },
+  }))
+
+  return (
+    <m.Provider>
+      <div {...m({ class: 'panel' })} />
+    </m.Provider>
+  )
+}
+```
+
+<Example slug="animated-button" />
+
+## API
+
+- `useMotion(props)` - `props` is a function returning a reactive motion-props object
+- Returns `m` - call it with regular element props to receive merged props
+- `m.Provider` - variant context provider; render it once per `useMotion` instance
+
+## See also
+
+- [`motion`](/docs/motion) - the component built on top of this primitive

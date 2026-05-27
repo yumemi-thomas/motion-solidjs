@@ -26,6 +26,11 @@ export type ValueRegistry = {
    */
   setExternal(key: string, mv: MotionValue): void
   /**
+   * Replace whatever currently owns `key` with a registry-owned static MV.
+   * Mirrors motion-dom's MV -> static prop swap behavior.
+   */
+  setStatic(key: string, value: unknown): MotionValue
+  /**
    * Return the MV for `key`, creating a transient initialised to `fallback`
    * if absent.
    */
@@ -52,6 +57,17 @@ export function createValueRegistry(): ValueRegistry {
         transient.delete(existing)
       }
       values.set(key, mv)
+    },
+    setStatic(key, value) {
+      const existing = values.get(key)
+      if (existing && transient.has(existing)) {
+        existing.jump(value, false)
+        return existing
+      }
+      const mv = motionValue(value)
+      values.set(key, mv)
+      transient.add(mv)
+      return mv
     },
     getOrCreateTransient(key, fallback) {
       const existing = values.get(key)

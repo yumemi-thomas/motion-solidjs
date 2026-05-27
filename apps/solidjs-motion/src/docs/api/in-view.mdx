@@ -1,0 +1,32 @@
+export const meta = {
+  slug: 'in-view',
+  title: 'inView',
+  group: 'functions',
+  description: 'Imperative IntersectionObserver wrapper for enter and leave callbacks.',
+  example: 'while-in-view',
+}
+
+# inView
+
+`inView` is an imperative wrapper around `IntersectionObserver`. The callback runs when an element
+enters; return a cleanup function to run when it leaves.
+
+```tsx
+import { inView } from 'solidjs-motion'
+
+const stop = inView(
+  '.card',
+  (info) => {
+    info.target.classList.add('seen')
+    return () => info.target.classList.remove('seen') // on exit
+  },
+  { amount: 0.5, margin: '0px' },
+)
+
+// later
+stop()
+```
+
+<Example slug="while-in-view" />
+
+For a reactive boolean, see [`createInView`](/docs/create-in-view).

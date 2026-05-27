@@ -1,0 +1,31 @@
+export const meta = {
+  slug: 'create-instant-layout-transition',
+  title: 'createInstantLayoutTransition',
+  group: 'primitives',
+  description:
+    'Wrap a synchronous update so layout snapshots are measured without playing a visible transition.',
+  example: 'create-instant-layout-transition',
+}
+
+# createInstantLayoutTransition
+
+<Todo>
+  solidjs-motion has no `createInstantLayoutTransition` — there is no way yet to opt a single layout
+  update out of its animation.
+</Todo>
+
+Returns a function that runs a callback inside an instant layout transition. Motion still measures
+layout before and after the update, but it skips the visible animation. Use it for route changes,
+scroll restores, and list resets that should not visibly slide between states.
+
+```tsx
+import { createInstantLayoutTransition } from 'solidjs-motion'
+
+const instant = createInstantLayoutTransition()
+
+function Reset(props: { onReset: () => void }) {
+  return <button onClick={() => instant(() => props.onReset())}>Reset</button>
+}
+```
+
+<Example slug="create-instant-layout-transition" />

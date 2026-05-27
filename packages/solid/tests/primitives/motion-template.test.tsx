@@ -1,6 +1,6 @@
 import { cleanup, render } from '@solidjs/testing-library'
 import { motionValue, type MotionValue } from 'motion-dom'
-import { createSignal, onMount } from 'solid-js'
+import { createRoot, createSignal, onMount } from 'solid-js'
 import { afterEach, describe, expect, it } from 'vitest'
 import { motion } from '@/components'
 import { createMotionTemplate } from '@/primitives/values'
@@ -41,6 +41,53 @@ describe('createMotionTemplate', () => {
     await new Promise((r) => requestAnimationFrame(() => r(undefined)))
     await delay(20)
     expect(transform.get()).toBe('translateX(10px) translateY(2px)')
+  })
+
+  it('seeds from an accessor interpolation', () => {
+    createRoot((dispose) => {
+      const [n] = createSignal(7)
+      const transform = createMotionTemplate`translateX(${() => n()}px)`
+      expect(transform.get()).toBe('translateX(7px)')
+      dispose()
+    })
+  })
+
+  it('updates reactively when an interpolated accessor signal changes', async () => {
+    await createRoot(async (dispose) => {
+      const [n, setN] = createSignal(1)
+      const transform = createMotionTemplate`translateX(${() => n()}px) scale(${2})`
+
+      render(() => {
+        onMount(() => setN(10))
+        return <motion.div style={{ transform: transform.get() }} />
+      })
+
+      await new Promise((r) => requestAnimationFrame(() => r(undefined)))
+      await delay(20)
+      expect(transform.get()).toBe('translateX(10px) scale(2)')
+      dispose()
+    })
+  })
+
+  it('mixes MotionValue and accessor interpolations', async () => {
+    await createRoot(async (dispose) => {
+      const x = motionValue(1)
+      const [y, setY] = createSignal(2)
+      const transform = createMotionTemplate`translateX(${x}px) translateY(${() => y()}px)`
+
+      render(() => {
+        onMount(() => {
+          x.set(10)
+          setY(20)
+        })
+        return <motion.div style={{ transform: transform.get() }} />
+      })
+
+      await new Promise((r) => requestAnimationFrame(() => r(undefined)))
+      await delay(20)
+      expect(transform.get()).toBe('translateX(10px) translateY(20px)')
+      dispose()
+    })
   })
 
   it('can be re-pointed to another MotionValue', async () => {

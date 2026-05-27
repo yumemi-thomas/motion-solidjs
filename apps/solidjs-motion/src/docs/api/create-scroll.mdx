@@ -1,0 +1,35 @@
+export const meta = {
+  slug: 'create-scroll',
+  title: 'createScroll',
+  group: 'primitives',
+  description: 'Track the scroll progress of the page, a container, or a target element.',
+  example: 'scroll-progress',
+}
+
+# createScroll
+
+`createScroll` exposes four `MotionValue`s: `scrollX`, `scrollY`, `scrollXProgress`, and
+`scrollYProgress`. They update on frames where the scroll position changes. Pair them with
+`createTransform` or `createSpring` to drive any visual property.
+
+```tsx
+import { createScroll, createSpring, motion } from 'solidjs-motion'
+
+function ProgressBar() {
+  const { scrollYProgress } = createScroll()
+  const smooth = createSpring(scrollYProgress, { stiffness: 120, damping: 30 })
+  return <motion.div style={{ scaleX: smooth }} class="origin-left h-1 bg-pink-500" />
+}
+```
+
+<Example slug="scroll-progress" />
+
+## Options
+
+- `container` - scrollable element (defaults to the viewport). Pass an accessor `() => HTMLElement`
+- `target` - element whose enter/leave drives progress
+- `axis` - `'y'` (default) or `'x'`
+- `offset` - pair of offset strings, e.g. `['start end', 'end start']`
+- `layoutEffect` - `false` to attach the scroll listener from an effect instead
+
+<Example slug="parallax" />

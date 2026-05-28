@@ -22,7 +22,7 @@ import { getAnimationMotionValue, shouldReduceMotion } from '@/motion/motion-han
 // in-flight tweens and keeps `ve.latestValues` consistent via MV subscribers.
 
 /** Minimal shape required from the per-type animation state for gating. */
-export interface ProtectedKeysState {
+interface ProtectedKeysState {
   protectedKeys: Record<string, true>
   needsAnimating: Record<string, boolean>
 }

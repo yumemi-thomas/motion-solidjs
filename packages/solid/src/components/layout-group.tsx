@@ -20,7 +20,10 @@ export interface SolidLayoutGroupProps extends LayoutGroupProps {
  * ```
  */
 export default function LayoutGroup(props: SolidLayoutGroupProps) {
-  const { forceRender, key } = createLayoutGroupProvider({ inherit: true, ...props })
+  const { forceRender, key } = createLayoutGroupProvider({
+    inherit: true,
+    ...props,
+  })
 
   return (
     <>

@@ -1,20 +1,12 @@
 import { Dynamic } from 'solid-js/web'
-import { children, createMemo, Show, type JSX } from 'solid-js'
+import { children, createMemo, Show, untrack, type JSX } from 'solid-js'
 import { isMotionValue, type MotionValue } from 'motion-dom'
 import type { FeatureBundle } from '@/features/dom-animation'
 import type { createVisualElement } from '@/features/dom-animation'
 import { updateLazyFeatureEntries, updateLazyFeatures } from '@/features/lazy-features'
 import { createMotionAttrs } from '@/motion/create-motion-attrs'
 import { useMotionValueChild } from '@/motion/use-motion-value-child'
-import type {
-  AsTag,
-  ComponentProps,
-  DefineComponent,
-  MotionHTMLAttributes,
-  Options,
-  SVGAttributesWithMotionValues,
-  SetMotionValueType,
-} from '@/types'
+import type { AsTag, ComponentProps, DefineComponent, MotionHTMLAttributes, Options } from '@/types'
 
 type MotionChild = JSX.Element | MotionValue<number> | MotionValue<string>
 
@@ -23,8 +15,9 @@ type MotionChild = JSX.Element | MotionValue<number> | MotionValue<string>
  * exported `isMotionValue` widens to `MotionValue<any>`, while
  * `useMotionValueChild` only needs numeric/string MotionValues.
  */
-const isMotionValueChild = (el: MotionChild): el is MotionValue<number> | MotionValue<string> =>
-  isMotionValue(el)
+const isMotionValueChild = (
+  el: MotionChild | undefined,
+): el is MotionValue<number> | MotionValue<string> => isMotionValue(el)
 
 /**
  * Render motion children with motion-react parity:
@@ -109,6 +102,12 @@ type MotionCompProps = {
 export interface MotionCreateOptions {
   forwardMotionProps?: boolean
   renderer?: typeof createVisualElement
+  /**
+   * Force the render type for a custom component, e.g.
+   * `motion.create(CustomSVG, { type: 'svg' })`, so SVG-specific attributes
+   * (viewBox, etc.) animate correctly.
+   */
+  type?: 'html' | 'svg'
 }
 
 type MotionNameSpace = Partial<{
@@ -150,13 +149,31 @@ function createMotionComponent(
         defaultAs: component,
         forwardMotionProps: forwardMotionProps(),
         renderer: options.renderer,
+        type: options.type,
       })
       const renderedComponent = getRenderedComponent(component, props)
+
+      // For a custom component (not an intrinsic tag) whose sole child is a
+      // MotionValue, motion/react unwraps it to its current value and forwards
+      // that as `children` (rather than the live <MotionChildren> wrapper a DOM
+      // tag renders). Mirror that, kept live via useMotionValueChild so the
+      // value still tracks the MotionValue.
+      const isCustomComponent = typeof renderedComponent !== 'string'
+      const motionValueChild = untrack(() =>
+        isCustomComponent && isMotionValueChild(props.children) ? props.children : undefined,
+      )
+      const customMotionValueChild = motionValueChild
+        ? useMotionValueChild(motionValueChild)
+        : undefined
 
       return (
         <motionAttrs.Provider>
           <Dynamic component={renderedComponent} {...motionAttrs(props)}>
-            <MotionChildren children={props.children} />
+            {customMotionValueChild ? (
+              customMotionValueChild()
+            ) : (
+              <MotionChildren children={props.children} />
+            )}
           </Dynamic>
         </motionAttrs.Provider>
       )
@@ -220,8 +237,3 @@ export function createMotionComponentWithFeatures(featureBundle?: FeatureBundle)
 
 export const m = createMotionComponentWithFeatures()
 export const M: MotionComponent = m.create('div')
-
-// Make the un-touched type SetMotionValueType / SVGAttributesWithMotionValues
-// reachable via this module so consumers that previously imported them from
-// `@/components/motion/types` still resolve. (Re-export for back-compat.)
-export type { SetMotionValueType, SVGAttributesWithMotionValues }

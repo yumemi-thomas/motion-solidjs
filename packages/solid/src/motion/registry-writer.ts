@@ -1,4 +1,4 @@
-import type { HTMLRenderState, MotionValue, ResolvedValues } from 'motion-dom'
+import type { HTMLRenderState, MotionValue, ResolvedValues, VisualElement } from 'motion-dom'
 import { buildHTMLStyles, frame, time } from 'motion-dom'
 import type { ValueRegistry } from './value-registry'
 
@@ -37,13 +37,22 @@ export type RegistryWriter = {
 export function createRegistryWriter(
   getElement: () => HTMLElement | SVGElement | null,
   registry: ValueRegistry,
+  getVisualElement?: () => VisualElement<Element> | undefined,
 ): RegistryWriter {
   const write = (): void => {
     const el = getElement()
     if (!el || registry.size === 0) return
+    // The VE is the source of truth once it exists: variant-label animations
+    // run through motion-dom's animateVisualElement, which drives the VE's
+    // values directly (sometimes a *different* MV instance than the registry's
+    // stale entry). Prefer the VE's current value per key so this writer paints
+    // the animated value instead of overwriting motion-dom's render with a
+    // stale registry value.
+    const veValues = getVisualElement?.()?.latestValues
     const snapshot: ResolvedValues = {}
     for (const [key, mv] of registry.entries()) {
-      snapshot[key] = mv.get()
+      const veVal = veValues?.[key]
+      snapshot[key] = veVal !== undefined ? veVal : mv.get()
     }
     const renderState = createHTMLRenderState()
     buildHTMLStyles(renderState, snapshot)

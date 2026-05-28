@@ -20,7 +20,7 @@ export interface VisualElementLifecycleOptions {
   type: 'html' | 'svg'
 }
 
-export interface VisualElementLifecycleParent {
+interface VisualElementLifecycleParent {
   visualElement?: VisualElement<Element>
   ensureVisualElement(): VisualElement<Element> | undefined
 }

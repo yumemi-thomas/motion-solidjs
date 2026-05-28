@@ -1,7 +1,5 @@
-import type { Point, TransformPoint } from 'motion-utils'
+import type { TransformPoint } from 'motion-utils'
 import type { Options } from '@/types'
-
-export type { Point, TransformPoint }
 
 /**
  * Motion configuration state shared through context

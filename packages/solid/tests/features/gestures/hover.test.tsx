@@ -1,6 +1,6 @@
 // Ported from motion/react: packages/framer-motion/src/gestures/__tests__/hover.test.tsx
 import { cleanup, render } from '@solidjs/testing-library'
-import { motionValue } from 'motion-dom'
+import { frame, isDragging, motionValue } from 'motion-dom'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { motion } from '@/components'
 import { delay } from '#tests/utils'
@@ -174,5 +174,169 @@ describe('hover', () => {
     pointerUp(element)
     await delay(15)
     expect(opacity.get()).toBe(1)
+  })
+
+  // --- Ported from motion/react hover.test.tsx (cases not previously covered) ---
+
+  it('Correctly uses transition applied to initial', async () => {
+    const opacity = motionValue(0.9)
+    const result = await new Promise<number>((resolve) => {
+      let hasMousedOut = false
+      const onComplete = () => {
+        frame.postRender(() => hasMousedOut && resolve(opacity.get()))
+      }
+      const wrapper = render(() => (
+        <motion.div
+          data-testid="m"
+          whileHover="hidden"
+          variants={{
+            initial: { opacity: 0.9, transition: { type: false } },
+            hidden: { opacity: 0.5, transition: { type: false }, transitionEnd: { opacity: 0.75 } },
+          }}
+          style={{ opacity }}
+          onAnimationComplete={onComplete}
+        />
+      ))
+      pointerEnter(wrapper.getByTestId('m'))
+      void nextFrame().then(() => {
+        setTimeout(() => {
+          hasMousedOut = true
+          pointerLeave(wrapper.getByTestId('m'))
+        }, 10)
+      })
+    })
+    expect(result).toBe(0.9)
+  })
+
+  it('whileHover is unapplied after drag ends when pointer left element during drag', async () => {
+    const opacity = motionValue(1)
+    const wrapper = render(() => (
+      <motion.div
+        data-testid="m"
+        whileHover={{ opacity: 0.5 }}
+        transition={{ type: false }}
+        style={{ opacity }}
+      />
+    ))
+    const element = wrapper.getByTestId('m')
+
+    pointerEnter(element)
+    await nextFrame()
+    expect(opacity.get()).toBe(0.5)
+
+    pointerDown(element)
+    isDragging.x = true
+
+    pointerLeave(element)
+    await nextFrame()
+    expect(opacity.get()).toBe(0.5)
+
+    isDragging.x = false
+    pointerUp(element)
+    await nextFrame()
+    expect(opacity.get()).toBe(1)
+  })
+
+  it('whileHover remains active when pointer is over element after drag ends', async () => {
+    const opacity = motionValue(1)
+    const wrapper = render(() => (
+      <motion.div
+        data-testid="m"
+        whileHover={{ opacity: 0.5 }}
+        transition={{ type: false }}
+        style={{ opacity }}
+      />
+    ))
+    const element = wrapper.getByTestId('m')
+
+    pointerEnter(element)
+    await nextFrame()
+    expect(opacity.get()).toBe(0.5)
+
+    pointerDown(element)
+    isDragging.x = true
+
+    isDragging.x = false
+    pointerUp(element)
+    await nextFrame()
+    expect(opacity.get()).toBe(0.5)
+  })
+
+  it('whileHover stays active during press and deactivates on release outside element', async () => {
+    const opacity = motionValue(1)
+    const wrapper = render(() => (
+      <motion.div
+        data-testid="m"
+        whileHover={{ opacity: 0.5 }}
+        transition={{ type: false }}
+        style={{ opacity }}
+      />
+    ))
+    const element = wrapper.getByTestId('m')
+
+    pointerEnter(element)
+    await nextFrame()
+    expect(opacity.get()).toBe(0.5)
+
+    pointerDown(element)
+    pointerLeave(element)
+    await nextFrame()
+    expect(opacity.get()).toBe(0.5)
+
+    pointerUp(element)
+    await nextFrame()
+    expect(opacity.get()).toBe(1)
+  })
+
+  it('whileHover stays active during press when pointer leaves before drag starts', async () => {
+    const opacity = motionValue(1)
+    const wrapper = render(() => (
+      <motion.div
+        data-testid="m"
+        drag
+        whileHover={{ opacity: 0.5 }}
+        transition={{ type: false }}
+        style={{ opacity }}
+      />
+    ))
+    const element = wrapper.getByTestId('m')
+
+    pointerEnter(element)
+    await nextFrame()
+    expect(opacity.get()).toBe(0.5)
+
+    pointerDown(element)
+    pointerLeave(element)
+    await nextFrame()
+    expect(opacity.get()).toBe(0.5)
+
+    pointerUp(element)
+    await nextFrame()
+    expect(opacity.get()).toBe(1)
+  })
+
+  it("whileHover only animates values that aren't being controlled by a higher-priority gesture", async () => {
+    const opacity = motionValue(1)
+    const scale = motionValue(1)
+    const wrapper = render(() => (
+      <motion.div
+        data-testid="m"
+        whileHover="hovering"
+        whileTap="tapping"
+        variants={{ hovering: { opacity: 0.5, scale: 0.5 }, tapping: { scale: 2 } }}
+        transition={{ type: false }}
+        style={{ opacity, scale }}
+      />
+    ))
+    const element = wrapper.getByTestId('m')
+
+    await nextFrame()
+    pointerDown(element)
+
+    await nextFrame()
+    pointerEnter(element)
+
+    await nextFrame()
+    expect([opacity.get(), scale.get()]).toEqual([0.5, 2])
   })
 })

@@ -104,6 +104,46 @@ function ownsVariants(options: MotionHandle['options']): boolean {
  *     (drag/layout/SVG) keep calling `visualElement.getBaseTarget` for
  *     full motion-dom parity.
  */
+/**
+ * Whether `key` has a base value defined in this element's own `initial` or
+ * `style` props (somewhere to fall back to when a variant removes it). Used to
+ * decide if a removed transform value should reset to its transform default
+ * rather than the (stale) animated value its baseTarget may have captured.
+ */
+function removedKeyHasPropsBase(handle: MotionHandle, key: string): boolean {
+  const opts = handle.options
+  const initial = opts.initial
+  if (typeof initial === 'string' || (typeof initial === 'object' && initial !== null)) {
+    const resolved = resolveVariant(
+      Array.isArray(initial) ? initial[0] : initial,
+      opts.variants,
+      opts.custom,
+    )
+    if (resolved && key in resolved && resolved[key] !== undefined) return true
+  }
+  const style = opts.style
+  return Boolean(style && style[key] !== undefined)
+}
+
+/**
+ * Run `animateChanges` on variant children that inherit `animate` from this
+ * node. Solid is fine-grained, so a child component doesn't re-render when a
+ * parent's `animate` (read via context) changes — meaning its own animateChanges
+ * (which tracks values a parent variant *removed* and applies the fallback)
+ * would never run. React triggers it by re-rendering variant children on context
+ * change; we mirror that explicitly. Recurses for nested inheritance.
+ */
+function cascadeAnimateChangesToInheritedChildren(handle: MotionHandle): void {
+  for (const child of handle.children) {
+    if (child.options.animate !== undefined) continue
+    // removalsOnly: motion-dom's animateVariant already animates the present
+    // values (and owns when/stagger orchestration); we only need to reset
+    // values the new variant removed.
+    stateMachines.get(child)?.animateChanges(undefined, true)
+    cascadeAnimateChangesToInheritedChildren(child)
+  }
+}
+
 function getBaseTargetSolidSide(handle: MotionHandle, key: string): unknown {
   const opts = handle.options
   const initial = opts.initial
@@ -211,7 +251,7 @@ function isKeyframesTarget(v: any): v is any[] {
 }
 
 interface AnimationStateAPI {
-  animateChanges: (changedActiveType?: AnimationType) => Promise<any>
+  animateChanges: (changedActiveType?: AnimationType, removalsOnly?: boolean) => Promise<any>
   setActive: (type: AnimationType, isActive: boolean) => Promise<any>
   setAnimateFunction: AnimationState['setAnimateFunction']
   getState: () => Record<string, AnimationTypeState>
@@ -225,9 +265,8 @@ interface DefinitionAndOptions {
 
 // Per-handle state machine — the cascade's recursion target. Replaces
 // motion-dom's `ve.animationState` so child machines are reachable from
-// their handle without going through a visual element. Exported so
-// create-motion.ts's setActive can route through it.
-export const stateMachines = new WeakMap<MotionHandle, AnimationStateAPI>()
+// their handle without going through a visual element.
+const stateMachines = new WeakMap<MotionHandle, AnimationStateAPI>()
 
 function getStateMachine(handle: MotionHandle): AnimationStateAPI {
   const machine = stateMachines.get(handle)
@@ -319,7 +358,12 @@ function createAnimationState(
    * 3. Determine if any values have been removed from a type and figure out
    *    what to animate those to.
    */
-  function animateChanges(changedActiveType?: AnimationType) {
+  // `removalsOnly`: only reset values a variant removed (the fallback
+  // animation), skipping the re-animation of present values. Used by the
+  // inherited-children cascade, where motion-dom's animateVariant already
+  // animates present values (and owns when/stagger orchestration) — so re-doing
+  // them here would double-animate and break that orchestration.
+  function animateChanges(changedActiveType?: AnimationType, removalsOnly = false) {
     const props = handle.options
     // VE may be undefined when no feature has needed one yet. Read locally
     // for the paths that still consult motion-dom (label cascade, stagger
@@ -484,7 +528,9 @@ function createAnimationState(
          */
         let valueHasChanged = false
         if (isKeyframesTarget(next) && isKeyframesTarget(prev)) {
-          valueHasChanged = !shallowCompare(next, prev)
+          // `|| variantDidChange` reruns keyframe animations when the variant
+          // label changes even if the keyframe arrays are identical (motion #2855).
+          valueHasChanged = !shallowCompare(next, prev) || variantDidChange
         } else {
           valueHasChanged = next !== prev
         }
@@ -534,7 +580,7 @@ function createAnimationState(
       const willAnimateViaParent = isInherited && variantDidChange
       const needsAnimating = !willAnimateViaParent || handledRemovedValues
 
-      if (shouldAnimateType && needsAnimating) {
+      if (!removalsOnly && shouldAnimateType && needsAnimating) {
         animations.push(
           ...definitionList.map((animation: AnimationDefinition) => {
             const options: VisualElementAnimationOptions = { type }
@@ -608,9 +654,18 @@ function createAnimationState(
         // When a VE exists, defer to its getBaseTarget which can also read
         // the live DOM. The Solid-side fallback skips that DOM read since
         // our writer keeps inline style current.
-        const fallbackTarget = visualElement
+        let fallbackTarget = visualElement
           ? visualElement.getBaseTarget(key)
           : getBaseTargetSolidSide(handle, key)
+
+        // A transform value introduced only by a now-removed variant — with no
+        // base in this element's own `initial`/`style` — must reset to its
+        // transform default, not the stale animated value. motion-dom returns
+        // `undefined` here (baseTarget captured at VE construction, before the
+        // variant ran); the Solid VE captures it lazily/late, so correct it.
+        if (transformProps.has(key) && !removedKeyHasPropsBase(handle, key)) {
+          fallbackTarget = defaultTransformValue(key)
+        }
 
         const mv = handle.getValueRegistry().get(key) ?? visualElement?.getValue(key)
         if (mv) mv.liveStyle = true
@@ -696,10 +751,14 @@ export function createAnimation(
   // a parent's animateVariant dispatch to reach children that inherit via
   // context.
   if (!state.ensureVisualElement()) return undefined
-  // True for the LazyMotion async path (features arrive after first
-  // render). Forwarded so manuallyAnimateOnMount mirrors upstream React's
-  // `hasMountedOnce` semantics.
-  const featureAttachedAfterMount = state.isMounted()
+  // True ONLY for the LazyMotion async path (features arrive in a later task,
+  // after the initial mount window). Eager features bind synchronously inside
+  // `attach()` while `isInitialMountPending` is still true, so this is false
+  // for them — otherwise it would be true for every component (the ref sets
+  // `element` before any feature binds) and wrongly force `manuallyAnimateOnMount`,
+  // defeating the `initial={false}` mount-animation suppression. Mirrors upstream
+  // React's `hasMountedOnce`: false during the first mount, true afterwards.
+  const featureAttachedAfterMount = state.isMounted() && !state.isInitialMountPending
   if (!stateMachines.has(state)) {
     const machine = createAnimationState(state, featureAttachedAfterMount)
     stateMachines.set(state, machine)
@@ -773,8 +832,13 @@ export function createAnimation(
   let prevAnimate: unknown
   const runUpdateAnimation = () => {
     const opts = getOpts()
+    const animateChanged = opts.animate !== prevAnimate
     stateMachines.get(state)?.animateChanges()
-    if (opts.animate !== prevAnimate) updateAnimationControlsSubscription()
+    // When this node's `animate` changes, variant children that inherit it
+    // need their own animateChanges to run so removed values get reset — Solid
+    // won't re-render them on the context change the way React does.
+    if (animateChanged) cascadeAnimateChangesToInheritedChildren(state)
+    if (animateChanged) updateAnimationControlsSubscription()
     prevAnimate = opts.animate
   }
 

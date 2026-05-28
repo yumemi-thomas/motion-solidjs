@@ -1,9 +1,10 @@
 import { isForcedMotionValue, isMotionValue } from 'motion-dom'
 
 import type { MotionProps } from '@/components/motion'
-import type { MotionStyleProps } from '@/types'
+import type { MotionStyleProps, Options } from '@/types'
 import type { MotionHandle } from './create-motion'
 import { resolveInitialValues } from './initial-values'
+import { resolveVariant } from './resolve-variant'
 import {
   buildSolidHTMLStyle,
   buildSolidSVGAttrs,
@@ -23,6 +24,24 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 function hasTargetValue(target: unknown, key: string) {
   return isRecord(target) && valueIsDefined(target[key])
+}
+
+/**
+ * Whether an `initial`/`animate` target defines `key`. Unlike `hasTargetValue`,
+ * this resolves variant *labels* (and label arrays) against `variants` — so a
+ * value controlled by e.g. `animate="active"` is recognised as owned by the
+ * animation and a plain `style` value for the same key isn't applied over it.
+ */
+function targetDefinesKey(
+  target: Options['initial'],
+  key: string,
+  variants: Options['variants'],
+  custom: unknown,
+) {
+  if (!valueIsDefined(target) || typeof target === 'boolean') return false
+  if (isRecord(target)) return valueIsDefined(target[key])
+  const resolved = resolveVariant(target, variants, custom)
+  return Boolean(resolved && key in resolved && valueIsDefined(resolved[key]))
 }
 
 function getTagName(tag: MotionProps<any>['as']) {
@@ -49,6 +68,10 @@ function applyHTMLStyleValues(
   styleProp: MotionStyleProps,
   motionProps: MotionHandle['options'],
   state: MotionHandle,
+  // Keys already provided by the resolved initial values (own OR inherited
+  // variant). A plain `style` value must not override these — `initial` wins
+  // for the first render; `style` is only a fallback for keys not in `initial`.
+  resolvedInitialKeys: Set<string>,
 ) {
   let veEnsured = false
   for (const key in styleProp) {
@@ -61,13 +84,34 @@ function applyHTMLStyleValues(
       state.ensureVisualElement()
       veEnsured = true
     }
-    if (
-      hasTargetValue(motionProps.initial, motionKey) ||
-      hasTargetValue(motionProps.animate, motionKey)
-    ) {
-      if (isMotionValue(value)) state.setStyleMotionValue(motionKey, value)
+    const inInitial = targetDefinesKey(
+      motionProps.initial,
+      motionKey,
+      motionProps.variants,
+      motionProps.custom,
+    )
+    const inAnimate = targetDefinesKey(
+      motionProps.animate,
+      motionKey,
+      motionProps.variants,
+      motionProps.custom,
+    )
+    if (isMotionValue(value) && (inInitial || inAnimate)) {
+      state.setStyleMotionValue(motionKey, value)
       continue
     }
+    // `initial` supplies the first-render value (and animation origin), so a
+    // lower-priority plain `style` value for the same key is skipped. Likewise
+    // `initial={false}` renders the resolved `animate` target (already in
+    // currentValues) with no mount animation, so the style value mustn't
+    // override it. But when only `animate` defines the key and `initial` is
+    // absent, the style value IS the animation origin — render it so motion-dom
+    // reads a real from-value and can accelerate (WAAPI), matching motion/react.
+    // Later style updates are still protected via cleanStylePropForMotionDom.
+    if (inInitial || (motionProps.initial === false && inAnimate)) continue
+    // The resolved initial (incl. an inherited variant) already set this key;
+    // don't let a plain style value clobber it.
+    if (!isMotionValue(value) && resolvedInitialKeys.has(motionKey)) continue
     if (isForced && !isMotionValue(value) && state.visualElement) {
       styleProps[motionKey] = value
       continue
@@ -115,13 +159,26 @@ function buildFinalStyle(
     return kebab
   }
 
-  return buildSolidHTMLStyle(styleProps, transformTemplate) ?? {}
+  const built = buildSolidHTMLStyle(styleProps, transformTemplate)
+  if (!built) return {}
+  // motion-dom's buildHTMLStyles emits camelCase keys (React accepts those on a
+  // style object). Solid's runtime applies a spread `style` object via
+  // `style.setProperty(key, value)`, which is a no-op for camelCase names — so
+  // multi-word props (backgroundColor, borderRadius, …) would silently vanish.
+  // Convert to kebab-case (leaving custom properties and already-kebab keys
+  // untouched) so the static-style path matches the animated-style path.
+  const kebab: MotionStyleProps = {}
+  for (const key in built) {
+    kebab[key.startsWith('--') ? key : camelToDash(key)] = built[key]
+  }
+  return kebab
 }
 
 export function buildMotionAttrs(options: {
   attrs: Record<string, MotionStyleValue>
   motionProps: MotionHandle['options']
-  props: MotionProps
+  // `transform` is a top-level SVG attribute, not on the base MotionProps surface.
+  props: MotionProps & { transform?: MotionStyleValue }
   state: MotionHandle
 }) {
   const isSVG = options.state.type === 'svg'
@@ -133,7 +190,17 @@ export function buildMotionAttrs(options: {
   let styleProps: MotionStyleProps = isSVG ? { ...styleProp } : { ...currentValues }
 
   if (!isSVG) {
-    applyHTMLStyleValues(styleProps, styleProp, options.motionProps, options.state)
+    // Snapshot the keys present from the resolved initial values (own or
+    // inherited variant) before the style pass, so a plain `style` value can't
+    // override an inherited-initial value.
+    const resolvedInitialKeys = new Set(Object.keys(currentValues))
+    applyHTMLStyleValues(
+      styleProps,
+      styleProp,
+      options.motionProps,
+      options.state,
+      resolvedInitialKeys,
+    )
   }
 
   styleProps = resolveStyleMotionValues(styleProps)
@@ -152,6 +219,16 @@ export function buildMotionAttrs(options: {
         !isForcedStyleMotionValue(dashToCamel(key), options.motionProps)
       if (isRawCss) rawCss[key] = styleProps[key]
       else svgInput[key] = styleProps[key]
+    }
+    // Scrape a `transform` prop (MotionValue or string) into the SVG values so
+    // motion-dom's buildSVGAttrs routes it to `style.transform` (+ transform-
+    // origin / transform-box) rather than leaving it as a raw `transform`
+    // attribute. Mirrors motion/react's scrapeMotionValuesFromProps → buildSVGAttrs.
+    const transformProp = options.props.transform
+    if (transformProp !== undefined && svgInput.transform === undefined) {
+      svgInput.transform = isMotionValue(transformProp) ? transformProp.get() : transformProp
+      if (isMotionValue(transformProp))
+        options.state.setStyleMotionValue('transform', transformProp)
     }
     const { attrs: svgAttrs, style: svgStyle } = buildSolidSVGAttrs(
       svgInput,
@@ -179,7 +256,8 @@ export function cleanStylePropForMotionDom(
     const motionKey = key.startsWith('--') ? key : dashToCamel(key)
     if (
       !isMotionValue(style[key]) &&
-      (hasTargetValue(options.initial, motionKey) || hasTargetValue(options.animate, motionKey))
+      (targetDefinesKey(options.initial, motionKey, options.variants, options.custom) ||
+        targetDefinesKey(options.animate, motionKey, options.variants, options.custom))
     ) {
       continue
     }

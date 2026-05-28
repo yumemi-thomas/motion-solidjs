@@ -10,7 +10,7 @@ import type { VariantType } from '@/types'
 
 // ---------- Public prop types ----------
 
-export type HoverEvent = (event: MouseEvent, info: EventInfo) => void
+type HoverEvent = (event: MouseEvent, info: EventInfo) => void
 
 export interface HoverProps {
   whileHover?: VariantLabels | VariantType
@@ -18,11 +18,17 @@ export interface HoverProps {
   onHoverEnd?: HoverEvent
 }
 
-export type TapEvent = (event: PointerEvent, info: EventInfo) => void
+type TapEvent = (event: PointerEvent, info: EventInfo) => void
 
 export interface PressProps {
   /** If `true`, the tap gesture attaches its start listener to window. */
   globalTapTarget?: boolean
+  /**
+   * Controls whether gestures bubble to ancestor motion components. Setting
+   * `{ tap: false }` stops this element's press from triggering ancestor tap
+   * gestures (maps to motion-dom's `stopPropagation` press option).
+   */
+  propagate?: { tap?: boolean }
   whileTap?: VariantLabels | VariantType
   onTapStart?: TapEvent
   onTap?: TapEvent
@@ -112,22 +118,30 @@ function bindPress(state: MotionHandle, getOpts: () => MotionHandle['options']):
     remove = undefined
     const element = state.element
     if (!element) return
+    // Disabled form controls never fire press (matches motion/react's
+    // PressGesture, which bails when the element is a disabled <button>).
+    const isDisabled = () => element instanceof HTMLButtonElement && element.disabled
     remove = press(
       [element],
       (_el, startEvent) => {
+        if (isDisabled()) return
         const props = state.options
         state.setActive('whileTap', true)
         if (props.onTapStart) {
           frame.postRender(() => props.onTapStart!(startEvent, extractEventInfo(startEvent)))
         }
         return (endEvent, { success }) => {
+          if (isDisabled()) return
           state.setActive('whileTap', false)
           const callbackName = success ? 'onTap' : 'onTapCancel'
           const cb = state.options[callbackName]
           if (cb) frame.postRender(() => cb(endEvent, extractEventInfo(endEvent)))
         }
       },
-      { useGlobalTarget: state.options.globalTapTarget },
+      {
+        useGlobalTarget: state.options.globalTapTarget,
+        stopPropagation: state.options.propagate?.tap === false,
+      },
     )
   }
 

@@ -1,4 +1,4 @@
-import type { MotionValue } from 'motion-dom'
+import type { MotionValue, VisualElement } from 'motion-dom'
 
 import { createRegistryWriter, type RegistryWriter } from './registry-writer'
 import type { ValueRegistry } from './value-registry'
@@ -6,6 +6,7 @@ import type { ValueRegistry } from './value-registry'
 export function createStyleWriterLifecycle(options: {
   getElement(): HTMLElement | SVGElement | null
   getRegistry(): ValueRegistry
+  getVisualElement?: () => VisualElement<Element> | undefined
   type: 'html' | 'svg'
 }) {
   let writer: RegistryWriter | undefined
@@ -14,7 +15,11 @@ export function createStyleWriterLifecycle(options: {
   const getWriter = (): RegistryWriter | undefined => {
     if (options.type === 'svg') return undefined
     if (!writer) {
-      writer = createRegistryWriter(() => options.getElement(), options.getRegistry())
+      writer = createRegistryWriter(
+        () => options.getElement(),
+        options.getRegistry(),
+        options.getVisualElement,
+      )
     }
     return writer
   }

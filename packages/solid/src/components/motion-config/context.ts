@@ -14,8 +14,10 @@ export const defaultConfig: MotionConfigState = {
 /**
  * Context for sharing motion configuration with child components
  */
-export const [injectMotionConfig, provideMotionConfig, motionConfigInjectionKey] =
+const [injectMotionConfig, , motionConfigInjectionKey] =
   createContext<Accessor<MotionConfigState>>('MotionConfig')
+
+export { motionConfigInjectionKey }
 
 export function createMotionConfig() {
   return injectMotionConfig(() => defaultConfig)

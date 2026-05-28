@@ -1,6 +1,6 @@
 import type { Box } from 'motion-utils'
 
-export interface LayoutLifecycles {
+interface LayoutLifecycles {
   onBeforeLayoutMeasure?: (box: Box) => void
 
   onLayoutMeasure?: (box: Box, prevBox: Box) => void

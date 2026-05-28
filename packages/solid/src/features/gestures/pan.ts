@@ -30,7 +30,7 @@ export interface PanProps {
 
 // ---------- PanSession (low-level, used by drag) ----------
 
-export type PanHandler = (event: Event, info: PanInfo) => void
+type PanHandler = (event: Event, info: PanInfo) => void
 
 interface PanSessionHandlers {
   onSessionStart: PanHandler
@@ -347,11 +347,6 @@ function asyncHandler(handler?: PanEventHandler) {
       motionFrame.postRender(() => handler(event, info))
     }
   }
-}
-
-export interface PanBinding {
-  mount(): void
-  unmount(): void
 }
 
 /**

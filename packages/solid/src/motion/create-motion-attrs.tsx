@@ -30,7 +30,7 @@ function exactMotionComponentPropKeys<const T extends readonly MotionComponentPr
   return keys
 }
 
-export const motionComponentPropKeys = exactMotionComponentPropKeys([
+const motionComponentPropKeys = exactMotionComponentPropKeys([
   'ignoreStrict',
   'forwardMotionProps',
   'whileDrag',
@@ -63,6 +63,7 @@ export const motionComponentPropKeys = exactMotionComponentPropKeys([
   'onLayoutAnimationStart',
   'onLayoutAnimationComplete',
   'globalTapTarget',
+  'propagate',
   'onTapStart',
   'onTap',
   'onTapCancel',
@@ -115,6 +116,7 @@ export interface CreateMotionAttrsOptions {
   defaultAs?: MotionProps<any>['as']
   forwardMotionProps?: boolean
   renderer?: typeof createVisualElement
+  type?: 'html' | 'svg'
 }
 
 export type CreateMotionAttrsReturn = {
@@ -227,6 +229,7 @@ export function createMotionAttrs(
   const state = createMotion(inputProps, {
     defaultAs: options.defaultAs,
     renderer: options.renderer,
+    type: options.type,
   })
 
   const motionAttrs = (props: CreateMotionAttrsProps = inputProps) => {

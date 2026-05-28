@@ -1,0 +1,11 @@
+{
+  "$schema": "https://unpkg.com/knip@6/schema.json",
+  "ignoreWorkspaces": ["apps/*"],
+  "ignoreDependencies": ["@typescript/native-preview", "eslint-plugin-solid", "solid-js"],
+  "workspaces": {
+    "packages/solid": {
+      "entry": ["src/index.ts", "tests/**/*.test.{ts,tsx}", "tests/**/setup.ts"],
+      "project": ["src/**/*.{ts,tsx}"]
+    }
+  }
+}

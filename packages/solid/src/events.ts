@@ -47,7 +47,7 @@ export function extractEventInfo(
   }
 }
 
-export function addPointerInfo(handler: EventListenerWithPointInfo): EventListener {
+function addPointerInfo(handler: EventListenerWithPointInfo): EventListener {
   return (event: PointerEvent) => isPrimaryPointer(event) && handler(event, extractEventInfo(event))
 }
 

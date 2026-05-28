@@ -136,6 +136,7 @@ function createMotionHandle(
   parent?: MotionHandle,
   config: {
     renderer?: VisualElementRenderer
+    type?: 'html' | 'svg'
   } = {},
 ): MotionHandle {
   let options = getOpts()
@@ -198,7 +199,7 @@ function createMotionHandle(
   }
   let getSnapshot: GetSnapshotHook = () => {}
   let didUpdate: DidUpdateHook = () => {}
-  const type: 'html' | 'svg' = isSVGElement(options.as) ? 'svg' : 'html'
+  const type: 'html' | 'svg' = config.type ?? (isSVGElement(options.as) ? 'svg' : 'html')
   const children = new Set<MotionHandle>()
   const getValueRegistry = (): ValueRegistry => {
     if (!valueRegistry) valueRegistry = createValueRegistry()
@@ -207,6 +208,7 @@ function createMotionHandle(
   const styleWriter = createStyleWriterLifecycle({
     getElement: () => element,
     getRegistry: getValueRegistry,
+    getVisualElement: () => visualLifecycle.get(),
     type,
   })
   const attachStyleWriter = (mv: MotionValue): void => {
@@ -240,7 +242,11 @@ function createMotionHandle(
     getLatestValues: () => latestValues,
     getOptions: () => options,
     getParent: () => parent,
-    getTag: () => getElementTag(options.as),
+    // A forced `type: 'svg'` (e.g. motion.create(CustomSVG, { type: 'svg' }))
+    // must build an SVGVisualElement so SVG-attribute animations (viewBox, …)
+    // are written — createVisualElement picks HTML vs SVG by the tag, and a
+    // custom component's tag isn't an SVG string.
+    getTag: () => (type === 'svg' ? 'svg' : getElementTag(options.as)),
     type,
   })
 
@@ -478,6 +484,8 @@ type PropsWithoutChildren = Omit<MotionProps, 'children'>
 export interface CreateMotionOptions {
   defaultAs?: MotionProps<any>['as']
   renderer?: typeof createVisualElement
+  /** Force the render type (e.g. `motion.create(CustomSVG, { type: 'svg' })`). */
+  type?: 'html' | 'svg'
 }
 
 /**
@@ -542,6 +550,7 @@ export function createMotion(props: MotionProps, options: CreateMotionOptions = 
 
   const state = createMotionHandle(getMotionProps, parentState ?? undefined, {
     renderer: options.renderer,
+    type: options.type,
   })
   provideMotion(state)
   createLazyMotionFeatureWatcher(state, lazyMotionContext)

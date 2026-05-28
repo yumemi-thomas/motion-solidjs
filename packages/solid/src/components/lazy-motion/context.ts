@@ -6,5 +6,5 @@ export type LazyMotionContext = {
   features: Accessor<Partial<FeatureBundle>>
   strict: Accessor<boolean>
 }
-export const [injectLazyMotionContext, lazyMotionContextProvider, lazyMotionInjectionKey] =
+export const [injectLazyMotionContext, , lazyMotionInjectionKey] =
   createContext<LazyMotionContext>('LazyMotionContext')

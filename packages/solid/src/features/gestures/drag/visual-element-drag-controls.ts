@@ -39,7 +39,7 @@ import type { MotionHandle } from '@/motion/create-motion'
 import type { MotionProps } from '@/components'
 import type { Axis, BoundingBox, Point } from 'motion-utils'
 
-export const elementDragControls = new WeakMap<VisualElement, VisualElementDragControls>()
+const elementDragControls = new WeakMap<VisualElement, VisualElementDragControls>()
 
 export interface DragControlOptions {
   snapToCursor?: boolean
@@ -96,7 +96,7 @@ function createLock(name: string) {
 const globalHorizontalLock = createLock('dragHorizontal')
 const globalVerticalLock = createLock('dragVertical')
 
-export function getGlobalLock(drag: boolean | 'x' | 'y' | 'lockDirection'): Lock {
+function getGlobalLock(drag: boolean | 'x' | 'y' | 'lockDirection'): Lock {
   let lock: Lock = false
   if (drag === 'y') {
     lock = globalVerticalLock()

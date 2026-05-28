@@ -5,10 +5,6 @@ export function compareMin<V>(a: ItemData<V>, b: ItemData<V>) {
   return a.layout.min - b.layout.min
 }
 
-export function getValue<V>(item: ItemData<V>) {
-  return item.value
-}
-
 export function checkReorder<T>(
   order: ItemData<T>[],
   value: T,
@@ -42,7 +38,7 @@ export function checkReorder<T>(
   return order
 }
 
-export function moveItem<T>([...arr]: T[], fromIndex: number, toIndex: number) {
+function moveItem<T>([...arr]: T[], fromIndex: number, toIndex: number) {
   const startIndex = fromIndex < 0 ? arr.length + fromIndex : fromIndex
 
   if (startIndex >= 0 && startIndex < arr.length) {

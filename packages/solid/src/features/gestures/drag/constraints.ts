@@ -97,18 +97,14 @@ export function resolveDragElastic(dragElastic: DragElastic = defaultElastic): B
   }
 }
 
-export function resolveAxisElastic(
-  dragElastic: DragElastic,
-  minLabel: string,
-  maxLabel: string,
-): Axis {
+function resolveAxisElastic(dragElastic: DragElastic, minLabel: string, maxLabel: string): Axis {
   return {
     min: resolvePointElastic(dragElastic, minLabel),
     max: resolvePointElastic(dragElastic, maxLabel),
   }
 }
 
-export function resolvePointElastic(dragElastic: DragElastic, label: string): number {
+function resolvePointElastic(dragElastic: DragElastic, label: string): number {
   return typeof dragElastic === 'number' ? dragElastic : dragElastic[label] || 0
 }
 

@@ -1,10 +1,38 @@
 import type { IProjectionNode } from 'motion-dom'
-import { HTMLProjectionNode, addScaleCorrector } from 'motion-dom'
+import {
+  HTMLProjectionNode,
+  addScaleCorrector,
+  globalProjectionState,
+  rootProjectionNode,
+} from 'motion-dom'
 import { createEffect } from 'solid-js'
 import { getClosestProjectingNode } from '@/features/layout/utils'
 import { defaultScaleCorrector } from '@/features/layout/config'
 import type { MotionHandle } from '@/motion/create-motion'
+import { setRootProjectionUpdater } from '@/motion/root-projection-update'
 import { isHTMLElement, isSSR } from '@/utils/is'
+
+// Lets the core handle request a root update on a new layout/drag node without
+// itself importing `rootProjectionNode` (which drags in the whole projection +
+// animation engine — kept out of bare `m`). Registered from inside
+// `createProjection` rather than at module top level so it survives the
+// package's `sideEffects: false` (a bare top-level call could be tree-shaken).
+// Timing is safe: the root can't have `hasEverUpdated` until a projection node
+// has been created, which only happens once `createProjection` has run.
+let rootUpdaterRegistered = false
+function ensureRootProjectionUpdater() {
+  if (rootUpdaterRegistered) return
+  rootUpdaterRegistered = true
+  setRootProjectionUpdater(() => {
+    if (
+      globalProjectionState.hasEverUpdated &&
+      rootProjectionNode.current &&
+      !rootProjectionNode.current.isUpdating
+    ) {
+      rootProjectionNode.current.startUpdate()
+    }
+  })
+}
 
 /**
  * Wire motion-dom's HTMLProjectionNode to a MotionHandle — the layer that
@@ -21,6 +49,7 @@ export function createProjection(
   // HTMLProjectionNode anchors to ve.latestValues and walks the VE parent
   // chain, so projection always needs a VE.
   if (!state.ensureVisualElement()) return undefined
+  ensureRootProjectionUpdater()
   let projection: IProjectionNode | undefined
 
   const setOptions = () => {

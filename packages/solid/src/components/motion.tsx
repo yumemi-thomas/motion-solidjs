@@ -110,12 +110,11 @@ export interface MotionCreateOptions {
   type?: 'html' | 'svg'
 }
 
-type MotionNameSpace = Partial<{
+type MotionNameSpace = {
   [K in keyof JSX.IntrinsicElements]: DefineComponent<
     Omit<MotionProps<K, unknown>, 'as' | 'motionConfig' | 'layoutGroup'> & MotionHTMLAttributes<K>
   >
-}> &
-  MotionCompProps
+} & MotionCompProps
 
 type InternalMotionProps = MotionProps<any>
 
@@ -211,6 +210,10 @@ export function createMotionComponentWithFeatures(featureBundle?: FeatureBundle)
   if (featureBundle?.lazyFeatures) updateLazyFeatureEntries(featureBundle.lazyFeatures)
   const namespace = createMotionNamespace(renderer)
 
+  // Cast required: the proxy target only literally holds `create`; the
+  // `motion.<tag>` components are synthesized lazily in `get`. The map in
+  // `MotionNameSpace` is non-optional (see note there), so the target isn't
+  // structurally assignable without this assertion.
   return new Proxy(namespace, {
     get(target, prop, receiver) {
       if (prop in target) {
@@ -223,7 +226,7 @@ export function createMotionComponentWithFeatures(featureBundle?: FeatureBundle)
         renderer,
       })
     },
-  })
+  }) as unknown as MotionNameSpace
 }
 
 // ---------------------------------------------------------------------------

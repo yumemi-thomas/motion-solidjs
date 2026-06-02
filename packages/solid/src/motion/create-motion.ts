@@ -1,4 +1,3 @@
-import { globalProjectionState, rootProjectionNode } from 'motion-dom'
 import type { MotionValue, ResolvedValues, VisualElement } from 'motion-dom'
 import { createComputed, createEffect, onCleanup, onMount, splitProps, untrack } from 'solid-js'
 
@@ -19,6 +18,7 @@ import {
   type FeatureBindingController,
 } from './feature-binding'
 import { createPresenceRegistration, type PresenceRegistration } from './presence-registration'
+import { requestRootProjectionUpdate } from './root-projection-update'
 import { createValueRegistry, type ValueRegistry } from './value-registry'
 import { resolveMotionDomProps } from './motion-dom-props'
 import {
@@ -142,14 +142,11 @@ function createMotionHandle(
   let options = getOpts()
   // Solid's fine-grained updates don't always re-run siblings before layout
   // measurement; start a root update so drag/layout snapshots survive a new
-  // layout-affecting node mounting.
-  if (
-    globalProjectionState.hasEverUpdated &&
-    rootProjectionNode.current &&
-    !rootProjectionNode.current.isUpdating &&
-    (options.layout || options.layoutId || options.drag)
-  ) {
-    rootProjectionNode.current.startUpdate()
+  // layout-affecting node mounting. Delegated to the projection feature via
+  // `requestRootProjectionUpdate` (no-op until that feature loads) so bare `m`
+  // never statically imports the projection engine.
+  if (options.layout || options.layoutId || options.drag) {
+    requestRootProjectionUpdate()
   }
   let element: HTMLElement | SVGElement | null = null
   let valueRegistry: ValueRegistry | undefined

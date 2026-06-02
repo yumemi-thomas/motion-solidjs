@@ -1,6 +1,6 @@
 {
   "name": "motion-solidjs",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Motion-compatible animation primitives for SolidJS",
   "keywords": [
     "motion",

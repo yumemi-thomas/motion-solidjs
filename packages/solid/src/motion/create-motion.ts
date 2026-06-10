@@ -19,8 +19,7 @@ import {
 } from './feature-binding'
 import type { PresenceRegistration, PresenceRegistrationLifecycle } from './presence-registration'
 import { requestRootProjectionUpdate } from './root-projection-update'
-import type { ValueRegistry } from './value-registry'
-import { inertValueRegistry, motionMachinery, type MotionMachinery } from './machinery'
+import { motionMachinery } from './machinery'
 import { resolveMotionDomProps } from './motion-dom-props'
 import {
   createVisualElementLifecycle,
@@ -85,10 +84,7 @@ export interface MotionHandle {
   updateFeatures(): void
   initVisualElement(renderer: VisualElementRenderer): void
   ensureVisualElement(): VisualElement<Element> | undefined
-  getValueRegistry(): ValueRegistry
-  attachStyleWriter(mv: MotionValue): void
   setStyleMotionValue(key: string, mv: MotionValue): void
-  setStyleStaticValue(key: string, value: unknown): void
 
   // ---- Extension slots (writable) -----------------------------------------
   getSnapshot: GetSnapshotHook
@@ -155,7 +151,6 @@ function createMotionHandle(
     requestRootProjectionUpdate()
   }
   let element: HTMLElement | SVGElement | null = null
-  let valueRegistry: ValueRegistry | undefined
   let isExiting = false
   let presenceContainer: HTMLElement | null = null
   let isInitialMountPending = false
@@ -204,46 +199,15 @@ function createMotionHandle(
   let didUpdate: DidUpdateHook = () => {}
   const type: 'html' | 'svg' = config.type ?? (isSVGElement(options.as) ? 'svg' : 'html')
   const children = new Set<MotionHandle>()
-  const getValueRegistry = (): ValueRegistry => {
-    if (!valueRegistry) {
-      const machinery = motionMachinery()
-      // Bare `m` before features load: behave as "no values registered",
-      // mirroring motion/react where nothing value-driven exists yet.
-      if (!machinery) return inertValueRegistry
-      valueRegistry = machinery.createValueRegistry()
-    }
-    return valueRegistry
-  }
-  let styleWriter: ReturnType<MotionMachinery['createStyleWriterLifecycle']> | undefined
-  const getStyleWriter = () => {
-    if (!styleWriter) {
-      styleWriter = motionMachinery()?.createStyleWriterLifecycle({
-        getElement: () => element,
-        getRegistry: getValueRegistry,
-        getVisualElement: () => visualLifecycle.get(),
-        type,
-      })
-    }
-    return styleWriter
-  }
-  const attachStyleWriter = (mv: MotionValue): void => {
-    getStyleWriter()?.attach(mv)
-  }
   const setStyleMotionValue = (key: string, mv: MotionValue): void => {
-    // Without machinery (no feature bundle yet) style MotionValues render
-    // their current value statically — motion/react parity. The tracked
-    // machinery read re-runs the attrs computation on install, which
-    // re-registers them live.
-    if (!motionMachinery()) return
-    getValueRegistry().setExternal(key, mv)
-    attachStyleWriter(mv)
-    visualLifecycle.get()?.addValue(key, mv)
-  }
-  const setStyleStaticValue = (key: string, value: unknown): void => {
-    if (!motionMachinery()) return
-    const mv = getValueRegistry().setStatic(key, value)
-    attachStyleWriter(mv)
-    visualLifecycle.get()?.addValue(key, mv)
+    // Without a feature bundle there is no renderer, `ensureVisualElement`
+    // stays undefined and style MotionValues render their current value
+    // statically — motion/react parity. The tracked machinery read in
+    // `getAttrs` re-runs the attrs computation on install, which
+    // re-registers them live. The VE owns the subscription: `addValue`
+    // binds the MV to its render loop.
+    const ve = ensureVisualElement()
+    if (ve && ve.getValue(key) !== mv) ve.addValue(key, mv)
   }
   const context = createVariantContext(
     () => options,
@@ -298,11 +262,10 @@ function createMotionHandle(
   const replayInitialAnimation = () => {
     const initialValues = resolveInitialValues(options, getContext())
     latestValues = initialValues
-    const registry = getValueRegistry()
+    const visualElement = visualLifecycle.get()
     for (const key in initialValues) {
       const value = initialValues[key]
-      const mv = registry.get(key)
-      if (mv) mv.jump(value, false)
+      visualElement?.getValue(key)?.jump(value, false)
       visualLifecycle.setLatestValue(key, value)
     }
     visualLifecycle.render()
@@ -366,9 +329,7 @@ function createMotionHandle(
     connectionRaf = undefined
     connectedCallbacks.length = 0
     presenceRegistration?.unregister()
-    styleWriter?.dispose()
     featureBindings?.dispose()
-    valueRegistry?.dispose()
     visualLifecycle.unmount()
     element = null
     hasAttached = false
@@ -507,10 +468,7 @@ function createMotionHandle(
     updateFeatures,
     initVisualElement,
     ensureVisualElement,
-    getValueRegistry,
-    attachStyleWriter,
     setStyleMotionValue,
-    setStyleStaticValue,
     _staticReplayHook: replayStaticTree,
   }
 

@@ -120,10 +120,11 @@ function applyHTMLStyleValues(
     styleProps[key] = value
     if (isMotionValue(value)) {
       state.setStyleMotionValue(motionKey, value)
-    } else if (state.getValueRegistry().has(motionKey)) {
-      state.setStyleStaticValue(motionKey, value)
-    } else if (state.visualElement) {
-      state.visualElement.getValue(motionKey)?.jump(value, false)
+    } else {
+      // A static style value for a key the VE already drives (a previous MV,
+      // or an animated key): jump the existing MotionValue so the VE renders
+      // the new static value instead of a stale one.
+      state.visualElement?.getValue(motionKey)?.jump(value, false)
     }
   }
 }

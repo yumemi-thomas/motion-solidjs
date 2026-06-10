@@ -5,8 +5,6 @@ import { isSVGElement } from '@/utils/is'
 import type { MotionHandle } from '@/motion/create-motion'
 import type { MotionMachinery } from '@/motion/machinery'
 import { createPresenceRegistration } from '@/motion/presence-registration'
-import { createStyleWriterLifecycle } from '@/motion/style-writer-lifecycle'
-import { createValueRegistry } from '@/motion/value-registry'
 import type { AsTag } from '@/types'
 
 export function createVisualElement(Component: AsTag, options: any) {
@@ -48,8 +46,6 @@ export interface FeatureBundle {
  * domAnimation / domMax).
  */
 export const motionHandleMachinery: MotionMachinery = {
-  createValueRegistry,
-  createStyleWriterLifecycle,
   createPresenceRegistration,
 }
 

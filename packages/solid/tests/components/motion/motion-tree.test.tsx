@@ -1,7 +1,7 @@
 import { cleanup, render } from '@solidjs/testing-library'
 import { afterEach, describe, expect, it } from 'vitest'
 import { Motion } from '@/components'
-import { mountedStates } from '@/motion/create-motion'
+import { mountedStates } from '@/core/create-motion'
 
 afterEach(() => {
   cleanup()
@@ -30,15 +30,14 @@ describe('Motion tree', () => {
     expect(child).toBeDefined()
     expect(wrapper?.parent).toBe(parent)
     expect(child?.parent).toBe(wrapper)
-    // Post C4-a, VEs are constructed lazily during feature bind (post-mount),
-    // so a child's VE sees `parent.current` already set and motion-dom's
-    // `manuallyAnimateOnMount` flag flips to `true`. That's semantically
-    // correct for Solid's top-down render: by the time the child exists as
-    // a VE, the parent's variantChildren cascade has already run, so the
-    // child needs to fire its own animation. The test below asserts the
-    // user-facing behavior (parent.variantChildren still includes the
-    // child) holds either way.
-    expect(child?.visualElement.manuallyAnimateOnMount).toBe(true)
+    // The VE constructor sets `manuallyAnimateOnMount = Boolean(parent.current)`,
+    // which in Solid is true even during a fresh tree mount (parent elements
+    // exist before children bind, unlike React's unattached refs). The
+    // animation feature recomputes it at mount-pass time from the handle's
+    // mount bookkeeping: nodes in a freshly-mounting subtree get `false`
+    // (the variant-controlling parent cascades to them, with stagger),
+    // matching React's initial-render semantics.
+    expect(child?.visualElement.manuallyAnimateOnMount).toBe(false)
     expect(Array.from(parent?.visualElement.children ?? []).map(getNodeId)).toEqual(['wrapper'])
     expect(Array.from(parent?.visualElement.variantChildren ?? []).map(getNodeId)).toEqual([
       'child',

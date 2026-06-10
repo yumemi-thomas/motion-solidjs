@@ -1,6 +1,7 @@
 // Short MotionValue helpers. Larger helpers (createTransform, createScroll)
 // live in their own files.
-import { createEffect, getOwner, onCleanup } from 'solid-js'
+import { createEffect, createSignal, getOwner, onCleanup } from 'solid-js'
+import type { Accessor } from 'solid-js'
 import {
   type FollowValueOptions,
   type FrameData,
@@ -12,10 +13,8 @@ import {
   collectMotionValues,
   frame,
   isMotionValue,
-  motionValue as createMotionValue,
+  motionValue,
 } from 'motion-dom'
-import { motionValue, isMotionValue as isMV } from 'motion-dom'
-import type { MotionValue as MV } from 'motion-dom'
 
 import { type MaybeAccessor, isAccessor, resolveAccessor } from '@/types'
 
@@ -41,9 +40,6 @@ function createAnimationFrame(callback: FrameCallback) {
  * want `createTransform` / `createComputed` / `createMotionTemplate` instead.
  */
 export function createCombinedMotionValue<T>(combineValues: () => T) {
-  /**
-   * Initialise the returned motion value. This remains the same between renders.
-   */
   const value = motionValue(combineValues())
 
   /**
@@ -54,10 +50,6 @@ export function createCombinedMotionValue<T>(combineValues: () => T) {
    */
   const updateValue = () => value.set(combineValues())
 
-  /**
-   * Subscribe to all motion values found within the template. Whenever any of them change,
-   * schedule an update.
-   */
   const scheduleUpdate = () => frame.preRender(updateValue, false, true)
   let subscriptions: VoidFunction[]
 
@@ -140,6 +132,13 @@ export function createMotionTemplate(
  * Dependencies are auto-tracked via `collectMotionValues`, and re-tracked on
  * every Solid effect run, so dependency sets can change between updates.
  *
+ * NOTE: `solid-js` exports an unrelated `createComputed` (an eager, void
+ * reactive computation) — take care not to auto-import the wrong one.
+ * `createTransform(fn)` is the canonical form of this primitive (it matches
+ * motion/react's `useTransform(fn)` and delegates here). Reach for either
+ * only when MotionValues are involved; a computation over plain signals
+ * feeding JSX is `createMemo` territory.
+ *
  * @example
  * ```tsx
  * const x = createMotionValue(0)
@@ -169,6 +168,34 @@ export function createComputed<T>(computed: () => T): MotionValue<T> {
   })
 
   return value
+}
+
+// ---------- createMotionValueSignal ----------
+
+/**
+ * Mirror a `MotionValue` into a Solid signal so it can be read in tracked
+ * scopes (`createMemo`, JSX, effects). MotionValues update on motion's
+ * frameloop outside Solid's reactive graph; this is the deliberate bridge
+ * across that boundary, unsubscribed on owner disposal.
+ *
+ * A value driven by an animation or drag pushes ~60 updates per second
+ * through the graph while it moves — fine for a readout or a derived flag,
+ * worth knowing before hanging heavy memos off it. (Same shape as Solid's
+ * `from`, with the initial value read synchronously.)
+ *
+ * @example
+ * ```tsx
+ * const x = createMotionValue(0)
+ * const x$ = createMotionValueSignal(x)
+ * const isFar = createMemo(() => Math.abs(x$()) > 100)
+ *
+ * return <span>{x$().toFixed(1)}</span>
+ * ```
+ */
+export function createMotionValueSignal<T>(value: MotionValue<T>): Accessor<T> {
+  const [signal, setSignal] = createSignal(value.get())
+  createMotionValueEvent(value, 'change', (latest) => setSignal(() => latest))
+  return signal
 }
 
 // ---------- createMotionValueEvent ----------
@@ -235,7 +262,7 @@ export function createTime() {
  * @public
  */
 export function createVelocity(value: MotionValue<number>): MotionValue<number> {
-  const velocity = createMotionValue(value.getVelocity())
+  const velocity = motionValue(value.getVelocity())
 
   const updateVelocity = () => {
     const latest = value.getVelocity()
@@ -273,7 +300,7 @@ type AnyResolvedKeyframe = string | number
  * straight into the `attachFollow` effect would tear down and re-create the
  * animation on every change, restarting it and dropping spring velocity.
  */
-function bridgeAccessor<T extends AnyResolvedKeyframe>(accessor: () => T): MV<T> {
+function bridgeAccessor<T extends AnyResolvedKeyframe>(accessor: () => T): MotionValue<T> {
   const driver = motionValue(accessor())
   createEffect(() => {
     driver.set(accessor())
@@ -288,8 +315,8 @@ function bridgeAccessor<T extends AnyResolvedKeyframe>(accessor: () => T): MV<T>
  * plain values and existing `MotionValue`s pass through untouched.
  */
 function resolveFollowSource<T extends AnyResolvedKeyframe>(
-  source: MaybeAccessor<T> | MV<T>,
-): T | MV<T> {
+  source: MaybeAccessor<T> | MotionValue<T>,
+): T | MotionValue<T> {
   return isAccessor(source) ? bridgeAccessor(source) : source
 }
 
@@ -314,11 +341,11 @@ function resolveFollowSource<T extends AnyResolvedKeyframe>(
  * ```
  */
 export function createFollowValue<T extends AnyResolvedKeyframe>(
-  source: MaybeAccessor<T> | MV<T>,
+  source: MaybeAccessor<T> | MotionValue<T>,
   options: MaybeAccessor<FollowValueOptions> = {},
 ) {
   const resolved = resolveFollowSource(source)
-  const value = motionValue(isMV(resolved) ? resolved.get() : resolved)
+  const value = motionValue(isMotionValue(resolved) ? resolved.get() : resolved)
 
   let cleanup: VoidFunction | undefined
 
@@ -358,19 +385,19 @@ export function createFollowValue<T extends AnyResolvedKeyframe>(
  * ```
  */
 export function createSpring(
-  source: MaybeAccessor<number> | MV<number>,
+  source: MaybeAccessor<number> | MotionValue<number>,
   config?: MaybeAccessor<SpringOptions>,
-): MV<number>
+): MotionValue<number>
 export function createSpring(
-  source: MaybeAccessor<string> | MV<string>,
+  source: MaybeAccessor<string> | MotionValue<string>,
   config?: MaybeAccessor<SpringOptions>,
-): MV<string>
+): MotionValue<string>
 export function createSpring(
-  source: MaybeAccessor<string | number> | MV<string> | MV<number>,
+  source: MaybeAccessor<string | number> | MotionValue<string> | MotionValue<number>,
   config: MaybeAccessor<SpringOptions> = {},
 ) {
   const resolved = resolveFollowSource(source)
-  const value = motionValue(isMV(resolved) ? resolved.get() : resolved)
+  const value = motionValue(isMotionValue(resolved) ? resolved.get() : resolved)
 
   createEffect(() => {
     const cleanup = attachFollow(value, resolved, { type: 'spring', ...resolveAccessor(config) })

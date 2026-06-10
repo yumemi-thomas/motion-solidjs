@@ -23,15 +23,11 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === 'object' && !Array.isArray(value)
 }
 
-function hasTargetValue(target: unknown, key: string) {
-  return isRecord(target) && valueIsDefined(target[key])
-}
-
 /**
- * Whether an `initial`/`animate` target defines `key`. Unlike `hasTargetValue`,
- * this resolves variant *labels* (and label arrays) against `variants` — so a
- * value controlled by e.g. `animate="active"` is recognised as owned by the
- * animation and a plain `style` value for the same key isn't applied over it.
+ * Whether an `initial`/`animate` target defines `key`. This resolves variant
+ * *labels* (and label arrays) against `variants` — so a value controlled by
+ * e.g. `animate="active"` is recognised as owned by the animation and a plain
+ * `style` value for the same key isn't applied over it.
  */
 function targetDefinesKey(
   target: Options['initial'],
@@ -64,66 +60,43 @@ function resolveAttrValues(attrs: MotionStyleRecord) {
   return attrsProps
 }
 
+/**
+ * Mirror of framer-motion's `copyRawValuesOnly`: copy plain CSS values into
+ * `base`, leaving MotionValues and forced motion values to render from
+ * `latestValues` (which the caller spreads OVER `base`, so any key motion
+ * owns — initial/animate-resolved, MV snapshots, animated values — wins by
+ * ordering, exactly like react's `{...rawStatics, ...builtFromLatestValues}`).
+ *
+ * Side effects per style entry: MVs register with the VisualElement (its
+ * `addValue` seeds `latestValues` from the MV and binds it to the render
+ * loop), and MV/forced values ensure the VE exists so baseTarget tracking
+ * covers removed-key fallbacks such as whileFocus -> blur.
+ */
 function applyHTMLStyleValues(
-  styleProps: MotionStyleRecord,
+  base: MotionStyleRecord,
   styleProp: MotionStyleRecord,
   motionProps: MotionHandle['options'],
   state: MotionHandle,
-  // Keys already provided by the resolved initial values (own OR inherited
-  // variant). A plain `style` value must not override these — `initial` wins
-  // for the first render; `style` is only a fallback for keys not in `initial`.
-  resolvedInitialKeys: Set<string>,
 ) {
-  let veEnsured = false
   for (const key in styleProp) {
     const value = styleProp[key]
     const motionKey = dashToCamel(key)
-    const isForced = isForcedStyleMotionValue(motionKey, motionProps)
-    // A style MV/forced value needs VE baseTarget tracking for removed-key
-    // fallback animations such as whileFocus -> blur.
-    if ((isMotionValue(value) || isForced) && !veEnsured) {
-      state.ensureVisualElement()
-      veEnsured = true
-    }
-    const inInitial = targetDefinesKey(
-      motionProps.initial,
-      motionKey,
-      motionProps.variants,
-      motionProps.custom,
-    )
-    const inAnimate = targetDefinesKey(
-      motionProps.animate,
-      motionKey,
-      motionProps.variants,
-      motionProps.custom,
-    )
-    if (isMotionValue(value) && (inInitial || inAnimate)) {
-      state.setStyleMotionValue(motionKey, value)
-      continue
-    }
-    // `initial` supplies the first-render value (and animation origin), so a
-    // lower-priority plain `style` value for the same key is skipped. Likewise
-    // `initial={false}` renders the resolved `animate` target (already in
-    // currentValues) with no mount animation, so the style value mustn't
-    // override it. But when only `animate` defines the key and `initial` is
-    // absent, the style value IS the animation origin — render it so motion-dom
-    // reads a real from-value and can accelerate (WAAPI), matching motion/react.
-    // Later style updates are still protected via cleanStylePropForMotionDom.
-    if (inInitial || (motionProps.initial === false && inAnimate)) continue
-    // The resolved initial (incl. an inherited variant) already set this key;
-    // don't let a plain style value clobber it.
-    if (!isMotionValue(value) && resolvedInitialKeys.has(motionKey)) continue
-    if (isForced && !isMotionValue(value) && state.visualElement) {
-      styleProps[motionKey] = value
-      continue
-    }
-    styleProps[key] = value
     if (isMotionValue(value)) {
-      state.setStyleMotionValue(motionKey, value)
-    } else if (state.getValueRegistry().has(motionKey)) {
-      state.setStyleStaticValue(motionKey, value)
-    } else if (state.visualElement) {
-      state.visualElement.getValue(motionKey)?.jump(value, false)
+      // The VE self-registers style MotionValues: its constructor and every
+      // `update()` scrape them from props (`scrapeMotionValuesFromProps`).
+      // Without a feature bundle there is no renderer, the VE stays
+      // unconstructed and the MV renders its current value statically —
+      // motion/react parity; the tracked machinery read in `getAttrs`
+      // re-runs this computation on install.
+      state.ensureVisualElement()
+    } else if (isForcedStyleMotionValue(motionKey, motionProps)) {
+      // Forced statics render from latestValues (the creation snapshot
+      // scrapes them, mirroring react's makeLatestValues; the VE's update
+      // scrape tracks later changes) — they just need the VE to exist for
+      // baseTarget tracking.
+      state.ensureVisualElement()
+    } else {
+      base[key] = value
     }
   }
 }
@@ -190,23 +163,17 @@ export function buildMotionAttrs(options: {
   // The public style prop is strictly typed (kebab-case csstype); internally
   // the pipeline mixes kebab and camelCase keys, so widen to a string record.
   const styleProp: MotionStyleRecord = options.props.style ?? {}
-  let styleProps: MotionStyleRecord = isSVG ? { ...styleProp } : { ...currentValues }
+  let styleProps: MotionStyleRecord
 
-  if (!isSVG) {
-    // Snapshot the keys present from the resolved initial values (own or
-    // inherited variant) before the style pass, so a plain `style` value can't
-    // override an inherited-initial value.
-    const resolvedInitialKeys = new Set(Object.keys(currentValues))
-    applyHTMLStyleValues(
-      styleProps,
-      styleProp,
-      options.motionProps,
-      options.state,
-      resolvedInitialKeys,
-    )
+  if (isSVG) {
+    // SVG styleProps start from the raw style prop, which can hold
+    // MotionValues — resolve them to current values before building.
+    styleProps = resolveStyleMotionValues(styleProp)
+  } else {
+    const base: MotionStyleRecord = {}
+    applyHTMLStyleValues(base, styleProp, options.motionProps, options.state)
+    styleProps = { ...base, ...currentValues }
   }
-
-  styleProps = resolveStyleMotionValues(styleProps)
 
   if (isSVG) {
     // Keep raw user CSS (non-MotionValue, non-transform) in `style` rather than
@@ -230,8 +197,9 @@ export function buildMotionAttrs(options: {
     const transformProp = options.props.transform
     if (transformProp !== undefined && svgInput.transform === undefined) {
       svgInput.transform = isMotionValue(transformProp) ? transformProp.get() : transformProp
-      if (isMotionValue(transformProp))
-        options.state.setStyleMotionValue('transform', transformProp)
+      // The SVG VE self-registers MotionValue props (incl. `transform`) via
+      // its scrapeMotionValuesFromProps; it just needs to exist.
+      if (isMotionValue(transformProp)) options.state.ensureVisualElement()
     }
     const { attrs: svgAttrs, style: svgStyle } = buildSolidSVGAttrs(
       svgInput,
@@ -258,8 +226,18 @@ export function cleanStylePropForMotionDom(
   let cleanStyle: MotionStyleRecord | undefined
   for (const key in styleRecord) {
     const motionKey = key.startsWith('--') ? key : dashToCamel(key)
+    const forcedByLayout =
+      (options.layout || options.layoutId !== undefined) &&
+      isForcedStyleMotionValue(motionKey, options)
     if (
       !isMotionValue(styleRecord[key]) &&
+      // Layout-forced values (scale-corrected keys and opacity under
+      // layout/layoutId) stay in motion-dom's style — react passes them
+      // through raw, and the latest-values scrape needs them as the
+      // pre-animation paint/origin. Plain transforms stay filtered when
+      // owned by initial/animate so a style update can't fight the
+      // animation (transforms are "forced" unconditionally upstream).
+      !forcedByLayout &&
       (targetDefinesKey(options.initial, motionKey, options.variants, options.custom) ||
         targetDefinesKey(options.animate, motionKey, options.variants, options.custom))
     ) {

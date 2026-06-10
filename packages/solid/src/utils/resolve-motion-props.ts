@@ -1,7 +1,7 @@
 import type { LayoutGroupState } from '@/components/context'
 import type { PresenceContext } from '@/components/animate-presence/presence'
 import type { MotionConfigState } from '@/components/motion-config/types'
-import type { ResolvedOptions } from '@/motion/motion-dom-props'
+import type { ResolvedOptions } from '@/core/motion-dom-props'
 
 export interface MotionContext {
   layoutGroup: LayoutGroupState

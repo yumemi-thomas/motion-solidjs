@@ -1,4 +1,4 @@
-export { M, m, type MotionProps } from './motion'
+export { M, m, type MotionCreateOptions, type MotionProps } from './motion'
 // `motion` / `Motion` live in a separate module so consumers that only
 // use `m`/`M` can tree-shake out `domMax` (and `HTMLVisualElement`).
 export { Motion, motion } from './motion-max'

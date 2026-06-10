@@ -41,7 +41,6 @@ export function resetAutoScrollState(): void {
       activeScrollEdge.delete(scrollableAncestor)
       initialScrollLimits.delete(scrollableAncestor)
     }
-    // Also try x axis
     const scrollableAncestorX = findScrollableAncestor(currentGroupElement, 'x')
     if (scrollableAncestorX && scrollableAncestorX !== scrollableAncestor) {
       activeScrollEdge.delete(scrollableAncestorX)

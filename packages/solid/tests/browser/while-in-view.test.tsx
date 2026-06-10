@@ -2,7 +2,7 @@ import { render } from '@solidjs/testing-library'
 import { createSignal } from 'solid-js'
 import { describe, expect, it } from 'vitest'
 import { motion } from '@/components'
-import type { ViewportOptions } from '@/features/gestures/gestures'
+import type { ViewportOptions } from '@/features/gestures/in-view'
 import { wait } from './helpers'
 
 // Subset matching what these tests exercise. `margin` follows

@@ -1,6 +1,6 @@
 {
   "name": "motion-solidjs",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "Motion-compatible animation primitives for SolidJS",
   "keywords": [
     "motion",
@@ -19,6 +19,7 @@
   "files": [
     "./LICENSE",
     "./README.md",
+    "./CHANGELOG.md",
     "./dist/v1"
   ],
   "type": "module",
@@ -40,7 +41,7 @@
     "build": "vp pack src/index.ts --dts --format esm --out-dir dist/v1 --unbundle --clean --from-vite",
     "dev": "vp pack src/index.ts --dts --format esm --out-dir dist/v1 --unbundle --watch --from-vite",
     "prepublishOnly": "pnpm build",
-    "test:types": "pnpm build && tsc --noEmit -p type-tests/tsconfig.json",
+    "test:types": "pnpm build && tsgo --noEmit -p type-tests/tsconfig.json",
     "test": "vitest run",
     "test:client": "vitest run --project=client",
     "test:browser": "vitest run --project=browser",

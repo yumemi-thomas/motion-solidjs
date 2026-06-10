@@ -8,6 +8,7 @@ export default defineConfig({
     ignorePatterns: [
       '.agents/**',
       '.claude/**',
+      'scripts/bundle-size/**',
       '**/dist/**',
       '**/coverage/**',
       '**/bench/dist/**',
@@ -51,6 +52,7 @@ export default defineConfig({
     ignorePatterns: [
       '.agents/**',
       '.claude/**',
+      'scripts/bundle-size/**',
       '**/dist/**',
       '**/coverage/**',
       '**/bench/dist/**',

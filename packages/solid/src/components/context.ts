@@ -1,4 +1,4 @@
-import type { MotionHandle } from '@/motion/create-motion'
+import type { MotionHandle } from '@/core/create-motion'
 import { createContext } from '@/utils'
 import type { NodeGroup } from 'motion-dom'
 import type { Accessor } from 'solid-js'

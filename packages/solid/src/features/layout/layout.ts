@@ -1,11 +1,10 @@
-import { addScaleCorrector, frame, globalProjectionState } from 'motion-dom'
-import type { IProjectionNode } from 'motion-dom'
-import type { MotionHandle } from '@/motion/create-motion'
+import { addScaleCorrector, Feature, frame, globalProjectionState } from 'motion-dom'
+import type { IProjectionNode, MotionNodeOptions } from 'motion-dom'
+import { getMotionHandle, type MotionHandle } from '@/core/create-motion'
 import { defaultScaleCorrector } from './config'
 import { isDefined } from '@/types'
 import type { Options } from '@/types'
 
-// Inlined from the former `@/utils/is-hidden` (sole consumer was this file).
 function isHidden(element: HTMLElement) {
   return (
     element.style.display === 'none' ||
@@ -35,22 +34,39 @@ function willUpdateLayoutTree(root: IProjectionNode | undefined, exclude: IProje
   })
 }
 
+export function isLayoutEnabled(options: MotionNodeOptions): boolean {
+  // Drag also needs the measure-layout lifecycle (snapshots, didUpdate) —
+  // upstream's drag feature definition carries MeasureLayout alongside the
+  // gesture for the same reason.
+  return Boolean(options.layout || options.layoutId || options.drag)
+}
+
 /**
  * Wire layout / shared-layout (layoutId) transitions to a MotionHandle.
  *
  * The implementation owns two extra slots on MotionHandle — getSnapshot and
  * didUpdate — that AnimatePresence and the create-motion lifecycle call into
- * for layout capture and reconciliation. We rebind those slots here so a
- * single handle can have layout behaviour swapped at runtime.
+ * for layout capture and reconciliation (the Solid analogue of React's
+ * getSnapshotBeforeUpdate / componentDidUpdate that framer's MeasureLayout
+ * rides on). We rebind those slots here so a single handle can have layout
+ * behaviour swapped at runtime.
  */
-export function createLayout(
-  state: MotionHandle,
-  _getOpts: () => MotionHandle['options'],
-): () => void {
-  // Layout reads `ve.projection` extensively — createProjection (a sibling
-  // factory in the same bundle) will have set it up by the time anything
-  // runs, but we still need the VE to exist for that to have happened.
-  if (!state.ensureVisualElement()) return undefined
+export class LayoutFeature extends Feature<Element> {
+  private cleanup?: () => void
+
+  mount(): void {
+    const state = getMotionHandle(this.node)
+    if (!state) return
+    this.cleanup = mountLayout(state)
+  }
+
+  unmount(): void {
+    this.cleanup?.()
+    this.cleanup = undefined
+  }
+}
+
+function mountLayout(state: MotionHandle): () => void {
   let hasMountSettled = false
   // Mirror upstream's `prevProps` arg. Initialise to the current options
   // so the first reactive change compares against an OLD reference of
@@ -85,9 +101,6 @@ export function createLayout(
       return
     }
 
-    /**
-     * Skip snapshot capture until the mount has settled.
-     */
     if (!hasMountSettled) {
       return
     }

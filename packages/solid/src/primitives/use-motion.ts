@@ -1,13 +1,13 @@
 import type { MotionProps } from '@/components/motion'
 import { domMax } from '@/features/dom-max'
-import { updateLazyFeatures } from '@/features/lazy-features'
+import { installFeatureDefinitions } from '@/features/definitions'
 import { createVisualElement } from '@/features/dom-animation'
-import { installMotionMachinery } from '@/motion/machinery'
+import { installMotionMachinery } from '@/core/machinery'
 import {
   type CreateMotionAttrsOptions,
   type CreateMotionAttrsReturn,
   createMotionAttrs,
-} from '@/motion/create-motion-attrs'
+} from '@/core/create-motion-attrs'
 
 // Eagerly register the max feature bundle so consumers can use useMotion
 // stand-alone (without first importing `motion.X`, which registers them as
@@ -17,7 +17,7 @@ function ensureFeatures() {
   if (featuresRegistered) return
   featuresRegistered = true
   if (domMax.machinery) installMotionMachinery(domMax.machinery)
-  updateLazyFeatures(domMax.features ?? [])
+  installFeatureDefinitions(domMax.features, domMax.projection)
 }
 
 export type UseMotionOptions = Omit<CreateMotionAttrsOptions, 'renderer'>

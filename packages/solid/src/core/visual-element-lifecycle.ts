@@ -1,7 +1,5 @@
-import { isForcedMotionValue, isMotionValue } from 'motion-dom'
 import type { ResolvedValues, VisualElement, VisualElementOptions } from 'motion-dom'
 
-import { dashToCamel } from './render-style'
 import { resolveMotionDomProps, type MotionDomOptions } from './motion-dom-props'
 
 export type VisualElementRenderer = (
@@ -34,24 +32,6 @@ function createRenderState() {
   }
 }
 
-function syncForcedStyleValues(
-  visualElement: VisualElement<Element> | undefined,
-  type: 'html' | 'svg',
-  nextOptions: MotionDomOptions,
-) {
-  if (!visualElement || type === 'svg') return
-  const style = nextOptions.style
-  if (!style) return
-  const motionProps = resolveMotionDomProps(nextOptions)
-  for (const key in style) {
-    const motionKey = dashToCamel(key)
-    const value = style[key]
-    if (!isMotionValue(value) && isForcedMotionValue(motionKey, motionProps)) {
-      visualElement.setStaticValue(motionKey, value)
-    }
-  }
-}
-
 export function createVisualElementLifecycle(options: VisualElementLifecycleOptions) {
   let renderer = options.initialRenderer
   let visualElement: VisualElement<Element> | undefined
@@ -70,8 +50,8 @@ export function createVisualElementLifecycle(options: VisualElementLifecycleOpti
         latestValues: { ...options.getLatestValues() },
       },
       reducedMotionConfig: currentOptions.motionConfig?.reducedMotion,
+      blockInitialAnimation: currentOptions.presenceContext?.initial === false,
     })
-    syncForcedStyleValues(visualElement, options.type, currentOptions)
     const element = options.getElement()
     if (element) visualElement.mount(element)
   }
@@ -89,9 +69,6 @@ export function createVisualElementLifecycle(options: VisualElementLifecycleOpti
       if (visualElement) return visualElement
       construct()
       return visualElement
-    },
-    syncForcedStyleValues(nextOptions: MotionDomOptions) {
-      syncForcedStyleValues(visualElement, options.type, nextOptions)
     },
     update(nextOptions: MotionDomOptions) {
       visualElement?.update(

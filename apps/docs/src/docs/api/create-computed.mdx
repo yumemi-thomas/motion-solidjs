@@ -10,7 +10,20 @@ export const meta = {
 # createComputed
 
 `createComputed` is the motion-value version of `createMemo`: it tracks `.get()` calls inside the
-getter and writes the derived result into a new `MotionValue`.
+getter and writes the derived result into a new `MotionValue`. It exists because MotionValues live
+outside Solid's reactive graph — they update on motion's frameloop, so a `createMemo` reading
+`.get()` would never re-run. `createTransform(fn)` is the canonical form of this primitive (it
+matches motion/react's `useTransform(fn)`); `createComputed` is the same thing under a
+motion-value-centric name.
+
+Two things to keep in mind:
+
+- **Name clash:** `solid-js` exports an unrelated `createComputed` (an eager reactive computation
+  that returns nothing). Make sure your import comes from `motion-solidjs`, especially with
+  auto-imports.
+- **When not to use it:** if the computation only reads Solid signals and the result feeds plain
+  JSX, use `createMemo` — reach for `createComputed`/`createTransform(fn)` only when MotionValues
+  are on the input or output side.
 
 ```tsx
 import { createComputed, createMotionValue } from 'motion-solidjs'

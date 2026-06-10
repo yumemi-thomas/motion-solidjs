@@ -1,0 +1,40 @@
+export const meta = {
+  slug: 'create-motion-value-signal',
+  title: 'createMotionValueSignal',
+  group: 'primitives',
+  description: 'Mirror a MotionValue into a Solid signal for use in tracked scopes.',
+}
+
+# createMotionValueSignal
+
+MotionValues live outside Solid's reactive graph — they update on motion's frameloop, so reading
+`.get()` inside `createMemo`, JSX, or an effect never registers a dependency.
+`createMotionValueSignal` is the deliberate bridge across that boundary: it mirrors a
+`MotionValue` into a signal, unsubscribing when the owning scope is disposed.
+
+```tsx
+import { createMotionValue, createMotionValueSignal, motion } from 'motion-solidjs'
+import { createMemo } from 'solid-js'
+
+const x = createMotionValue(0)
+const x$ = createMotionValueSignal(x)
+const isFar = createMemo(() => Math.abs(x$()) > 100)
+
+return (
+  <>
+    <motion.div drag="x" style={{ x }} />
+    <span>
+      {x$().toFixed(1)} {isFar() ? '· far!' : ''}
+    </span>
+  </>
+)
+```
+
+Two notes:
+
+- **Cost:** a value driven by an animation or drag pushes ~60 updates per second through the
+  graph while it moves. That's fine for a readout or a derived flag; think twice before hanging
+  heavy memos off it. To go the other direction — or stay on the frameloop entirely — use
+  [`createTransform`](/docs/create-transform).
+- **Relation to `from`:** this is the same shape as Solid's `from(...)`, with the initial value
+  read synchronously instead of starting `undefined`.

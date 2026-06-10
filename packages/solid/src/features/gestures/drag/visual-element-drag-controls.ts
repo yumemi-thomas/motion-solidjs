@@ -33,9 +33,10 @@ import {
   mixNumber,
   percent,
   resize,
+  setDragLock,
 } from 'motion-dom'
 import { invariant } from '@/utils/is'
-import type { MotionHandle } from '@/motion/create-motion'
+import type { MotionHandle } from '@/core/create-motion'
 import type { MotionProps } from '@/components'
 import type { Axis, BoundingBox, Point } from 'motion-utils'
 
@@ -49,17 +50,9 @@ export interface DragControlOptions {
 type DragDirection = 'x' | 'y'
 type DragControlProps = Omit<MotionHandle['options'], keyof DragHandlers> & DragHandlers
 
-// ---------- Global drag gesture lock ----------
-//
-// Two module-level locks (horizontal + vertical) coordinate drag gestures
-// across the entire page. Each drag acquires the locks it cares about on
-// start; release happens in cancel(). The locks also feed motion-dom's
-// hover gesture via `isDragActive` so a hover that started during a drag
-// is suppressed (filter in `motion-dom/gestures/hover` falls back through
-// here transitively — we don't import isDragActive but the same lock is
-// shared via motion-dom).
-
-export type Lock = (() => void) | false
+// The global drag gesture lock is motion-dom's `setDragLock`/`isDragging`
+// state — shared with its hover/press gating, so a hover that starts during
+// a drag is suppressed by the same lock the drag holds.
 
 /**
  * Resolve `dragConstraints` to its underlying value. In Solid, the React-ref
@@ -79,55 +72,15 @@ function resolveDragConstraintsValue(
   return value ?? false
 }
 
-function createLock(name: string) {
-  let lock: null | string = null
-  return (): Lock => {
-    const openLock = (): void => {
-      lock = null
-    }
-    if (lock === null) {
-      lock = name
-      return openLock
-    }
-    return false
-  }
-}
-
-const globalHorizontalLock = createLock('dragHorizontal')
-const globalVerticalLock = createLock('dragVertical')
-
-function getGlobalLock(drag: boolean | 'x' | 'y' | 'lockDirection'): Lock {
-  let lock: Lock = false
-  if (drag === 'y') {
-    lock = globalVerticalLock()
-  } else if (drag === 'x') {
-    lock = globalHorizontalLock()
-  } else {
-    const openHorizontal = globalHorizontalLock()
-    const openVertical = globalVerticalLock()
-    if (openHorizontal && openVertical) {
-      lock = () => {
-        openHorizontal()
-        openVertical()
-      }
-    } else {
-      // Release the locks because we don't use them
-      if (openHorizontal) openHorizontal()
-      if (openVertical) openVertical()
-    }
-  }
-  return lock
-}
-
 export class VisualElementDragControls {
   private state: MotionHandle
 
   private panSession?: PanSession
 
-  // This is a reference to the global drag gesture lock, ensuring only one component
-  // can "capture" the drag of one or both axes.
-  // TODO: Look into moving this into pansession?
-  private openGlobalLock: Lock | null = null
+  // This is a reference to the global drag gesture lock (motion-dom's
+  // `isDragging` state, shared with its gesture gating), ensuring only one
+  // component can "capture" the drag of one or both axes.
+  private openGlobalLock: VoidFunction | null = null
 
   isDragging = false
   private currentDirection: DragDirection | null = null
@@ -175,9 +128,9 @@ export class VisualElementDragControls {
       if (drag && !dragPropagation) {
         if (this.openGlobalLock) this.openGlobalLock()
 
-        this.openGlobalLock = getGlobalLock(drag)
+        this.openGlobalLock = setDragLock(drag)
 
-        // If we don 't have the lock, don't start dragging
+        // If we don't have the lock, don't start dragging
         if (!this.openGlobalLock) return
       }
 

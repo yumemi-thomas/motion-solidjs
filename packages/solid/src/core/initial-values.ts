@@ -1,4 +1,4 @@
-import { isMotionValue, isVariantLabel } from 'motion-dom'
+import { isForcedMotionValue, isMotionValue, isVariantLabel } from 'motion-dom'
 import type { ResolvedValues } from 'motion-dom'
 
 import type { PresenceContext } from '@/components/animate-presence/presence'
@@ -82,13 +82,23 @@ function resolveDefinitionValues(
   return resolved
 }
 
-function styleMotionValueSnapshot(style: MotionOptionsWithPresence['style']): ResolvedValues {
+// Mirrors react's makeLatestValues scrape pass: style MotionValue snapshots
+// plus forced motion values (keys that layout/drag must own, e.g. transforms
+// under `layout`) seed the latest values; variant-resolved values override.
+function styleMotionValueSnapshot(options: MotionOptionsWithPresence): ResolvedValues {
+  const style = options.style
   const styleSnapshot: ResolvedValues = {}
   if (style) {
+    const layoutProps = { layout: options.layout, layoutId: options.layoutId }
     for (const key in style) {
       const value = style[key]
       if (isMotionValue(value)) {
         styleSnapshot[key] = value.get()
+      } else if (
+        isForcedMotionValue(key, layoutProps) &&
+        (typeof value === 'string' || typeof value === 'number')
+      ) {
+        styleSnapshot[key] = value
       }
     }
   }
@@ -100,7 +110,7 @@ export function resolveInitialValues(
   context?: MotionStateContext,
 ): ResolvedValues {
   return {
-    ...styleMotionValueSnapshot(options.style),
+    ...styleMotionValueSnapshot(options),
     ...resolveDefinitionValues(options, context),
   }
 }
@@ -117,7 +127,7 @@ export function resolveLateStyleMotionValues(
   options: MotionOptionsWithPresence,
   context?: MotionStateContext,
 ): ResolvedValues {
-  const snapshot = styleMotionValueSnapshot(options.style)
+  const snapshot = styleMotionValueSnapshot(options)
   const owned = resolveDefinitionValues(options, context)
   for (const key in owned) {
     delete snapshot[key]

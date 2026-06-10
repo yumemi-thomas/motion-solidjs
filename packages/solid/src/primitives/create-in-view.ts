@@ -1,6 +1,6 @@
 import { createEffect, createSignal, onCleanup } from 'solid-js'
 import type { Accessor } from 'solid-js'
-import type { ViewportOptions } from '@/features/gestures/gestures'
+import type { ViewportOptions } from '@/features/gestures/in-view'
 import { inView } from 'motion'
 import {
   type MaybeAccessor,
@@ -43,7 +43,7 @@ export function createInView(
   options?: MaybeAccessor<CreateInViewOptions>,
 ): Accessor<boolean> {
   // Seed from `initial` (resolved once at construction — there's no
-  // re-seeding mid-life). Defaults to false to match prior behaviour.
+  // re-seeding mid-life).
   const initialOptions = resolveAccessor(options) ?? {}
   const [isInView, setIsInView] = createSignal(initialOptions.initial ?? false)
 

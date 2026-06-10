@@ -1,10 +1,11 @@
-import { cancelFrame, frame, frameData } from 'motion-dom'
+import { cancelFrame, Feature, frame, frameData } from 'motion-dom'
 import type { EventInfo } from 'motion-dom'
 import { frame as motionFrame } from 'motion-dom'
 import type { Point, TransformPoint } from 'motion-utils'
 import { millisecondsToSeconds, noop, pipe, secondsToMilliseconds } from 'motion-utils'
 
 import { addPointerEvent, extractEventInfo, isPrimaryPointer } from '@/events'
+import { getMotionHandle } from '@/core/create-motion'
 import { getContextWindow } from '@/utils'
 
 // ---------- Public types ----------
@@ -352,59 +353,62 @@ function asyncHandler(handler?: PanEventHandler) {
 }
 
 /**
- * Wire pan handlers (onPanStart, onPan, onPanEnd, onPanSessionStart) to a
- * MotionHandle's element. Attaches a pointerdown listener unconditionally
- * (the session decides whether to honor it based on current opts); cleanup
- * ends any in-flight session.
+ * Wire pan handlers (onPanStart, onPan, onPanEnd, onPanSessionStart) to the
+ * element. Attaches a pointerdown listener on mount (the session decides
+ * whether to honor it based on current opts); unmount ends any in-flight
+ * session.
  */
-export function createPan(
-  state: import('@/motion/create-motion').MotionHandle,
-  _getOpts: () => import('@/motion/create-motion').MotionHandle['options'],
-): () => void {
-  // Pan reads `getTransformPagePoint()` and `getContextWindow(ve)` on each
-  // session — both are VE methods. Ensure the VE here so the bundle that
-  // pulls pan in pays the allocation; bundles without pan skip it.
-  if (!state.ensureVisualElement()) return undefined
-  let session: PanSession | undefined
-  let removePointerDownListener: () => void = () => {
-    /* noop */
-  }
+export class PanGesture extends Feature<Element> {
+  private session?: PanSession
+  private removePointerDownListener?: () => void
 
-  const createPanHandlers = () => ({
-    onSessionStart: asyncHandler((_, info) => {
-      const { onPanSessionStart } = state.options
-      onPanSessionStart && onPanSessionStart(_, info)
-    }),
-    onStart: asyncHandler((_, info) => {
-      const { onPanStart } = state.options
-      onPanStart && onPanStart(_, info)
-    }),
-    onMove: asyncHandler((event, info) => {
-      const { onPan } = state.options
-      onPan && onPan(event, info)
-    }),
-    onEnd: (event: PointerEvent, info: PanInfo) => {
-      const { onPanEnd } = state.options
-      session = undefined
-      if (onPanEnd) {
-        motionFrame.postRender(() => onPanEnd(event, info))
-      }
-    },
-  })
+  mount(): void {
+    const state = getMotionHandle(this.node)
+    const element = state?.element
+    if (!state || !element) return
 
-  const onPointerDown = (pointerDownEvent: PointerEvent) => {
-    session = new PanSession(pointerDownEvent, createPanHandlers(), {
-      transformPagePoint: state.visualElement.getTransformPagePoint(),
-      contextWindow: getContextWindow(state.visualElement),
+    const createPanHandlers = () => ({
+      onSessionStart: asyncHandler((_, info) => {
+        const { onPanSessionStart } = state.options
+        onPanSessionStart && onPanSessionStart(_, info)
+      }),
+      onStart: asyncHandler((_, info) => {
+        const { onPanStart } = state.options
+        onPanStart && onPanStart(_, info)
+      }),
+      onMove: asyncHandler((event, info) => {
+        const { onPan } = state.options
+        onPan && onPan(event, info)
+      }),
+      onEnd: (event: PointerEvent, info: PanInfo) => {
+        const { onPanEnd } = state.options
+        this.session = undefined
+        if (onPanEnd) {
+          motionFrame.postRender(() => onPanEnd(event, info))
+        }
+      },
     })
+
+    const onPointerDown = (pointerDownEvent: PointerEvent) => {
+      this.session = new PanSession(pointerDownEvent, createPanHandlers(), {
+        transformPagePoint: this.node.getTransformPagePoint(),
+        contextWindow: getContextWindow(this.node),
+      })
+    }
+
+    this.removePointerDownListener = addPointerEvent(element, 'pointerdown', onPointerDown)
   }
 
-  if (state.element) {
-    removePointerDownListener = addPointerEvent(state.element, 'pointerdown', onPointerDown)
+  unmount(): void {
+    this.removePointerDownListener?.()
+    this.removePointerDownListener = undefined
+    this.session?.end()
+    this.session = undefined
   }
+}
 
-  return () => {
-    removePointerDownListener()
-    session?.end()
-  }
+const panProps = ['onPan', 'onPanStart', 'onPanSessionStart', 'onPanEnd'] as const
+
+export function isPanEnabled(options: import('motion-dom').MotionNodeOptions): boolean {
+  return panProps.some((name) => Boolean(options[name]))
 }

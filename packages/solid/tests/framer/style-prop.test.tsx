@@ -79,7 +79,10 @@ describe('framer parity — style prop', () => {
     const backgroundColor = motionValue('#fff')
     const [useMV, setUseMV] = createSignal(true)
     const wrapper = render(() => (
-      <motion.div data-testid="m" style={{ backgroundColor: useMV() ? backgroundColor : '#000' }} />
+      <motion.div
+        data-testid="m"
+        style={{ 'background-color': useMV() ? backgroundColor : '#000' }}
+      />
     ))
     const el = wrapper.getByTestId('m')
     expect(el.style.backgroundColor).toBe('rgb(255, 255, 255)')

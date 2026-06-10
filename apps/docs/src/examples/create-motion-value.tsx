@@ -22,7 +22,7 @@ export default function UseMotionValueExample() {
           dragElastic={0.05}
           dragMomentum={false}
           class="h-12 w-12 cursor-grab rounded-full active:cursor-grabbing"
-          style={{ x, backgroundColor: bg, scale }}
+          style={{ x, 'background-color': bg, scale }}
         />
       </div>
       <motion.span class="font-mono text-xs" style={{ color: bg }}>

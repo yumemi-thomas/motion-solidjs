@@ -234,7 +234,7 @@ describe('motion component rendering and styles', () => {
   })
 
   it('renders styled component and overwrites style', () => {
-    const wrapper = render(() => <motion.div style={{ backgroundColor: '#f00' }} />)
+    const wrapper = render(() => <motion.div style={{ 'background-color': '#f00' }} />)
     expectStyle(wrapper.container.firstChild as Element, 'background-color: #f00')
   })
 

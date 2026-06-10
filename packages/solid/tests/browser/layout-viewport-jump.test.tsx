@@ -41,13 +41,13 @@ const boxStyle = {
 }
 
 const scrollableStyle = {
-  position: 'fixed' as const,
+  position: 'fixed',
   top: 0,
   left: 0,
   right: 0,
   height: '500px',
   overflow: 'scroll',
-}
+} as const
 
 describe('Viewport jump', () => {
   it('window scroll does not trigger a layout animation', async () => {

@@ -24,7 +24,7 @@ function expectBboxClose(
   expect(Math.abs(bbox.height - expected.height)).toBeLessThanOrEqual(tolerance)
 }
 
-const baseBox = { position: 'absolute', top: 0, left: 0, background: 'red' }
+const baseBox = { position: 'absolute', top: 0, left: 0, background: 'red' } as const
 const a = { ...baseBox, width: '100px', height: '200px' }
 const b = { ...baseBox, top: '100px', left: '200px', width: '300px', height: '300px' }
 
@@ -38,7 +38,7 @@ describe('Layout animation', () => {
         id="box"
         data-testid="box"
         layout
-        style={{ ...(state() ? a : b), backgroundColor }}
+        style={{ ...(state() ? a : b), 'background-color': backgroundColor }}
         onClick={() => setState(!state())}
         transition={{ duration: 0.5, ease: () => 0.5 }}
         onLayoutAnimationStart={() => backgroundColor.set('green')}
@@ -156,7 +156,7 @@ describe('Layout animation', () => {
         data-testid="box"
         layout
         layoutDependency={0}
-        style={{ ...(state() ? a : b), backgroundColor }}
+        style={{ ...(state() ? a : b), 'background-color': backgroundColor }}
         onClick={() => setState(!state())}
         transition={{ duration: 0.15, ease: () => 0.5 }}
         onLayoutAnimationComplete={() => backgroundColor.set('blue')}

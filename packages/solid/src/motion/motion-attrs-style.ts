@@ -11,6 +11,7 @@ import {
   camelToDash,
   dashToCamel,
   readMotionValue,
+  type MotionStyleRecord,
   type MotionStyleValue,
 } from './render-style'
 
@@ -55,7 +56,7 @@ function isForcedStyleMotionValue(
   return isForcedMotionValue(key, options)
 }
 
-function resolveAttrValues(attrs: Record<string, MotionStyleValue>) {
+function resolveAttrValues(attrs: MotionStyleRecord) {
   const attrsProps: Record<string, unknown> = { ...attrs }
   Object.keys(attrs).forEach((key) => {
     attrsProps[key] = readMotionValue(attrs[key])
@@ -64,8 +65,8 @@ function resolveAttrValues(attrs: Record<string, MotionStyleValue>) {
 }
 
 function applyHTMLStyleValues(
-  styleProps: MotionStyleProps,
-  styleProp: MotionStyleProps,
+  styleProps: MotionStyleRecord,
+  styleProp: MotionStyleRecord,
   motionProps: MotionHandle['options'],
   state: MotionHandle,
   // Keys already provided by the resolved initial values (own OR inherited
@@ -127,15 +128,15 @@ function applyHTMLStyleValues(
   }
 }
 
-function resolveStyleMotionValues(values: MotionStyleProps): MotionStyleProps {
-  const resolved: MotionStyleProps = {}
+function resolveStyleMotionValues(values: MotionStyleRecord): MotionStyleRecord {
+  const resolved: MotionStyleRecord = {}
   for (const key in values) {
     resolved[key] = readMotionValue(values[key])
   }
   return resolved
 }
 
-function addDragStyles(styleProps: MotionStyleProps, props: MotionProps) {
+function addDragStyles(styleProps: MotionStyleRecord, props: MotionProps) {
   if (props.drag && props.dragListener !== false) {
     Object.assign(styleProps, {
       userSelect: 'none',
@@ -147,12 +148,12 @@ function addDragStyles(styleProps: MotionStyleProps, props: MotionProps) {
 }
 
 function buildFinalStyle(
-  styleProps: MotionStyleProps,
+  styleProps: MotionStyleRecord,
   transformTemplate: MotionProps['transformTemplate'],
   isSVG: boolean,
 ) {
   if (isSVG) {
-    const kebab: Record<string, MotionStyleValue> = {}
+    const kebab: MotionStyleRecord = {}
     for (const key in styleProps) {
       kebab[camelToDash(key)] = styleProps[key]
     }
@@ -167,7 +168,7 @@ function buildFinalStyle(
   // multi-word props (backgroundColor, borderRadius, …) would silently vanish.
   // Convert to kebab-case (leaving custom properties and already-kebab keys
   // untouched) so the static-style path matches the animated-style path.
-  const kebab: MotionStyleProps = {}
+  const kebab: MotionStyleRecord = {}
   for (const key in built) {
     kebab[key.startsWith('--') ? key : camelToDash(key)] = built[key]
   }
@@ -186,8 +187,10 @@ export function buildMotionAttrs(options: {
   const currentValues = options.motionProps.motionConfig?.isStatic
     ? resolveInitialValues(options.motionProps, options.state.context)
     : options.state.visualElement?.latestValues || options.state.latestValues
-  const styleProp = options.props.style || {}
-  let styleProps: MotionStyleProps = isSVG ? { ...styleProp } : { ...currentValues }
+  // The public style prop is strictly typed (kebab-case csstype); internally
+  // the pipeline mixes kebab and camelCase keys, so widen to a string record.
+  const styleProp: MotionStyleRecord = options.props.style ?? {}
+  let styleProps: MotionStyleRecord = isSVG ? { ...styleProp } : { ...currentValues }
 
   if (!isSVG) {
     // Snapshot the keys present from the resolved initial values (own or
@@ -211,8 +214,8 @@ export function buildMotionAttrs(options: {
     // SVG attribute (it does `state.attrs = state.style` for non-root SVG tags).
     // Mirrors framer-motion's copyRawValuesOnly: transform shortcuts (x/y/scale)
     // and MotionValues still route through buildSVGAttrs to become transform/attrs.
-    const rawCss: MotionStyleProps = {}
-    const svgInput: MotionStyleProps = { ...currentValues }
+    const rawCss: MotionStyleRecord = {}
+    const svgInput: MotionStyleRecord = { ...currentValues }
     for (const key in styleProps) {
       const isRawCss =
         !isMotionValue(styleProp[key]) &&
@@ -248,21 +251,22 @@ export function buildMotionAttrs(options: {
 export function cleanStylePropForMotionDom(
   style: MotionStyleProps | undefined,
   options: MotionProps,
-): MotionStyleProps | undefined {
+): MotionStyleRecord | undefined {
   if (!style || typeof style !== 'object') return undefined
 
-  let cleanStyle: MotionStyleProps | undefined
-  for (const key in style) {
+  const styleRecord: MotionStyleRecord = style
+  let cleanStyle: MotionStyleRecord | undefined
+  for (const key in styleRecord) {
     const motionKey = key.startsWith('--') ? key : dashToCamel(key)
     if (
-      !isMotionValue(style[key]) &&
+      !isMotionValue(styleRecord[key]) &&
       (targetDefinesKey(options.initial, motionKey, options.variants, options.custom) ||
         targetDefinesKey(options.animate, motionKey, options.variants, options.custom))
     ) {
       continue
     }
     cleanStyle ??= {}
-    cleanStyle[motionKey] = style[key]
+    cleanStyle[motionKey] = styleRecord[key]
   }
   return cleanStyle
 }

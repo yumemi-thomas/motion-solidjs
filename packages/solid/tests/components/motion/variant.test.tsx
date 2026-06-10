@@ -98,7 +98,7 @@ describe('animate prop as variant', () => {
                 updateDelayedBy(0)
                 order.push(1)
               }}
-              style={{ willChange: 'auto' }}
+              style={{ 'will-change': 'auto' }}
             />
             <Motion
               variants={variants}
@@ -106,7 +106,7 @@ describe('animate prop as variant', () => {
                 updateDelayedBy(1)
                 order.push(2)
               }}
-              style={{ willChange: 'auto' }}
+              style={{ 'will-change': 'auto' }}
             />
           </Motion>
           <Motion>
@@ -116,7 +116,7 @@ describe('animate prop as variant', () => {
                 updateDelayedBy(2)
                 order.push(3)
               }}
-              style={{ willChange: 'auto' }}
+              style={{ 'will-change': 'auto' }}
             />
             <Motion
               variants={variants}
@@ -124,7 +124,7 @@ describe('animate prop as variant', () => {
                 updateDelayedBy(3)
                 order.push(4)
               }}
-              style={{ willChange: 'auto' }}
+              style={{ 'will-change': 'auto' }}
             />
           </Motion>
         </Motion>
@@ -238,7 +238,7 @@ describe('animate prop as variant', () => {
               updateDelayedBy(0)
               order.push(1)
             }}
-            style={{ willChange: 'auto' }}
+            style={{ 'will-change': 'auto' }}
           />
           <Motion
             variants={variants}
@@ -246,7 +246,7 @@ describe('animate prop as variant', () => {
               updateDelayedBy(1)
               order.push(2)
             }}
-            style={{ willChange: 'auto' }}
+            style={{ 'will-change': 'auto' }}
           />
           <Motion
             variants={variants}
@@ -254,7 +254,7 @@ describe('animate prop as variant', () => {
               updateDelayedBy(2)
               order.push(3)
             }}
-            style={{ willChange: 'auto' }}
+            style={{ 'will-change': 'auto' }}
           />
           <Motion
             variants={variants}
@@ -262,7 +262,7 @@ describe('animate prop as variant', () => {
               updateDelayedBy(3)
               order.push(4)
             }}
-            style={{ willChange: 'auto' }}
+            style={{ 'will-change': 'auto' }}
           />
         </Motion>
       ))
@@ -322,22 +322,22 @@ describe('animate prop as variant', () => {
           <Motion
             variants={variants}
             onUpdate={() => centerOrder.push(1)}
-            style={{ willChange: 'auto' }}
+            style={{ 'will-change': 'auto' }}
           />
           <Motion
             variants={variants}
             onUpdate={() => centerOrder.push(2)}
-            style={{ willChange: 'auto' }}
+            style={{ 'will-change': 'auto' }}
           />
           <Motion
             variants={variants}
             onUpdate={() => centerOrder.push(3)}
-            style={{ willChange: 'auto' }}
+            style={{ 'will-change': 'auto' }}
           />
           <Motion
             variants={variants}
             onUpdate={() => centerOrder.push(4)}
-            style={{ willChange: 'auto' }}
+            style={{ 'will-change': 'auto' }}
           />
         </Motion>
       ))
@@ -355,22 +355,22 @@ describe('animate prop as variant', () => {
           <Motion
             variants={variants}
             onUpdate={() => firstOrder.push(1)}
-            style={{ willChange: 'auto' }}
+            style={{ 'will-change': 'auto' }}
           />
           <Motion
             variants={variants}
             onUpdate={() => firstOrder.push(2)}
-            style={{ willChange: 'auto' }}
+            style={{ 'will-change': 'auto' }}
           />
           <Motion
             variants={variants}
             onUpdate={() => firstOrder.push(3)}
-            style={{ willChange: 'auto' }}
+            style={{ 'will-change': 'auto' }}
           />
           <Motion
             variants={variants}
             onUpdate={() => firstOrder.push(4)}
-            style={{ willChange: 'auto' }}
+            style={{ 'will-change': 'auto' }}
           />
         </Motion>
       ))

@@ -551,7 +551,7 @@ describe('animate prop as variant', () => {
             expect(latest.willChange).not.toBe('auto')
             onUpdate(latest)
           }}
-          style={{ x, willChange: 'transform' }}
+          style={{ x, 'will-change': 'transform' }}
         />
       ))
       setTimeout(() => setXTarget(1), 30)
@@ -744,12 +744,12 @@ describe('animate prop as variant', () => {
           <motion.div
             data-testid="variant-trigger"
             onTap={() => setVariant('b')}
-            style={{ width: 300, height: 300, backgroundColor: 'rgb(255,255,0)' }}
+            style={{ width: '300px', height: '300px', 'background-color': 'rgb(255,255,0)' }}
             variants={{ b: { backgroundColor: 'rgb(0,255,255)' } }}
           >
             <motion.div
               data-testid="inner"
-              style={{ width: 100, height: 100, backgroundColor: 'rgb(255,255,0)' }}
+              style={{ width: '100px', height: '100px', 'background-color': 'rgb(255,255,0)' }}
               variants={{
                 'a-hover': { backgroundColor: 'rgb(150,150,0)' },
                 b: { backgroundColor: 'rgb(0,255,255)' },

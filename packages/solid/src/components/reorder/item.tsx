@@ -59,7 +59,7 @@ export default function Item<V>(props: SolidReorderItemProps<V>) {
       dragSnapToOrigin
       dragElastic={props.dragElastic ?? 0.5}
       dragMomentum={props.dragMomentum ?? true}
-      style={{ ...userStyle(), x: point.x, y: point.y, zIndex }}
+      style={{ ...userStyle(), x: point.x, y: point.y, 'z-index': zIndex }}
       onLayoutMeasure={(measured, prevMeasured) => {
         context.registerItem(props.value, measured)
         props.onLayoutMeasure?.(measured, prevMeasured)

@@ -484,7 +484,7 @@ describe('createTransform', () => {
       const scrollY = motionValue(0)
       const paddingBlock = createTransform(scrollY, [0, 100], [0, 100])
 
-      const { container } = render(() => <Motion style={{ paddingBlock }} />)
+      const { container } = render(() => <Motion style={{ 'padding-block': paddingBlock }} />)
       const element = container.firstElementChild as HTMLElement
 
       await nextFrame()
@@ -516,10 +516,10 @@ describe('createTransform', () => {
       const { container } = render(() => (
         <Motion
           style={{
-            insetBlock: createTransform(progress, [0, 100], [0, 100]),
-            insetInline: createTransform(progress, [0, 100], [0, 100]),
-            marginBlock: createTransform(progress, [0, 100], [0, 100]),
-            paddingInline: createTransform(progress, [0, 100], [0, 100]),
+            'inset-block': createTransform(progress, [0, 100], [0, 100]),
+            'inset-inline': createTransform(progress, [0, 100], [0, 100]),
+            'margin-block': createTransform(progress, [0, 100], [0, 100]),
+            'padding-inline': createTransform(progress, [0, 100], [0, 100]),
           }}
         />
       ))

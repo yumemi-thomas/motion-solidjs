@@ -224,7 +224,7 @@ describe('Shared layout: A -> B transition (crossfade w/ AnimatePresence)', () =
 function SwitchABApp(props: { type?: boolean | 'position' | 'size' }) {
   const [state, setState] = createSignal(true)
   const backgroundColor = motionValue('#f00')
-  const box = { position: 'absolute' as const, top: 0, left: 0, background: 'red' }
+  const box = { position: 'absolute', top: 0, left: 0, background: 'red' } as const
   const a = { ...box, width: '100px', height: '200px' }
   const b = {
     ...box,
@@ -250,7 +250,7 @@ function SwitchABApp(props: { type?: boolean | 'position' | 'size' }) {
           layout={(props.type ?? true) as any}
           style={{
             ...(id === 'a' ? a : b),
-            backgroundColor,
+            'background-color': backgroundColor,
             'border-radius': id === 'a' ? '0px' : '20px',
             opacity: id === 'a' ? 0.4 : 1,
           }}
@@ -479,11 +479,11 @@ function CrossfadeABApp(props: { type?: any; size?: boolean; move?: 'yes' | 'no'
     opacity: { duration: 1, ease: () => 0.1 },
   }
   const box = {
-    position: 'absolute' as const,
+    position: 'absolute',
     top: 0,
     left: 0,
     background: 'red',
-  }
+  } as const
   const a = { ...box, width: '100px', height: '200px' }
   const b = {
     ...box,
@@ -1134,13 +1134,13 @@ function ClearSnapshotsApp(props: { sibling?: boolean }) {
   const [state, setState] = createSignal(0)
   const cycle = () => setState((state() + 1) % 3)
   const baseBox = {
-    position: 'absolute' as const,
+    position: 'absolute',
     top: '100px',
     left: 0,
     width: '100px',
     height: '100px',
     background: 'red',
-  }
+  } as const
   const a = { ...baseBox }
   const b = { ...baseBox, left: '200px' }
   return (

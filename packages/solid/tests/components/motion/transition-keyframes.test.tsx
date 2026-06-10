@@ -143,7 +143,7 @@ describe('keyframes transition', () => {
           transition={{ duration: 0.1, times: [0, 0, 1, 1] }}
           onUpdate={(latest: { x: number }) => output.push(Math.round(latest.x))}
           onAnimationComplete={() => resolve(output)}
-          style={{ willChange: 'auto' }}
+          style={{ 'will-change': 'auto' }}
         />
       ))
     })

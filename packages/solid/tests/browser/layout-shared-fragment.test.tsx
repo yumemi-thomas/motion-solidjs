@@ -17,13 +17,13 @@ afterEach(() => cleanup())
 // element would project from top:0 → 150 instead.
 
 const baseBox = {
-  position: 'absolute' as const,
+  position: 'absolute',
   left: 0,
   background: 'red',
-}
+} as const
 
-const a = { ...baseBox, top: 100, width: 100, height: 100 }
-const b = { ...baseBox, top: 300, width: 100, height: 100 }
+const a = { ...baseBox, top: '100px', width: '100px', height: '100px' }
+const b = { ...baseBox, top: '300px', width: '100px', height: '100px' }
 
 function A(props: { onClick: () => void }) {
   return (

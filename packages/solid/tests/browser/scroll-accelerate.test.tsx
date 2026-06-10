@@ -38,7 +38,10 @@ describe('scroll-accelerate', () => {
           <div style={spacer} />
           <div style={spacer} />
           <div style={spacer} />
-          <motion.div id="direct" style={{ ...box, opacity, backgroundColor }} />
+          <motion.div
+            id="direct"
+            style={{ ...box, opacity, 'background-color': backgroundColor }}
+          />
           <motion.div id="chained" style={{ ...box, opacity: chainedOpacity, top: '110px' }} />
           <span id="direct-accelerated">{opacity.accelerate ? 'true' : 'false'}</span>
           <span id="chained-accelerated">{chainedOpacity.accelerate ? 'true' : 'false'}</span>

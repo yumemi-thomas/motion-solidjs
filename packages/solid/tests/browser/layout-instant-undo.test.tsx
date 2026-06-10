@@ -16,12 +16,12 @@ afterEach(() => cleanup())
 // intermediate measurement.
 
 const box = {
-  position: 'absolute' as const,
+  position: 'absolute',
   top: 0,
   width: '100px',
   height: '100px',
   background: 'red',
-}
+} as const
 const a = { ...box, left: '200px' }
 const b = { ...box, left: '500px' }
 

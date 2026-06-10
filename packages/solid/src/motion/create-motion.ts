@@ -578,12 +578,17 @@ export function createMotion(props: MotionProps, options: CreateMotionOptions = 
     type: options.type,
   })
   provideMotion(state)
-  // Eagerly re-read the merged props on every change. The spread consumer
-  // evaluates `motionAttrs` through a lazy memo whose dependency set can be
-  // collected in a context that misses prop reads (leaving the style spread
-  // stale until the next frame render); a hot subscriber re-evaluating the
-  // full props each flush keeps that evaluation fresh. The pre-Feature
-  // architecture got this incidentally from per-feature getOpts effects.
+  // Keep every prop getter hot. Solid's mergeProps wraps function spread
+  // sources in createMemo (solid dist/dev.js, mergeProps), so the component's
+  // `{...motionAttrs(props)}` is a memoized evaluation; without another
+  // live subscriber to the prop getters, that memo's dependency set has been
+  // observed to drop the style getter after a flush in which it evaluates
+  // twice — the spread then re-applies stale attrs until the VE's next frame
+  // render. Re-reading the merged props each flush prevents the drop
+  // (empirically: 4 style-prop tests fail without this; a style-only read
+  // also passes, but the full read covers transformTemplate/drag inputs that
+  // flow through the same getters). The pre-Feature architecture got this
+  // incidentally from per-feature getOpts effects.
   createEffect(() => {
     getMotionProps()
   })

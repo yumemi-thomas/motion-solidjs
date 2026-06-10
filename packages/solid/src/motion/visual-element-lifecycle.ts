@@ -70,6 +70,7 @@ export function createVisualElementLifecycle(options: VisualElementLifecycleOpti
         latestValues: { ...options.getLatestValues() },
       },
       reducedMotionConfig: currentOptions.motionConfig?.reducedMotion,
+      blockInitialAnimation: currentOptions.presenceContext?.initial === false,
     })
     syncForcedStyleValues(visualElement, options.type, currentOptions)
     const element = options.getElement()

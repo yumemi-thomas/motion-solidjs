@@ -1,27 +1,10 @@
-import type { Point } from 'motion-utils'
+import { addDomEvent, isPrimaryPointer } from 'motion-dom'
+import type { EventInfo } from 'motion-dom'
 
-/** @public */
-export interface EventInfo {
-  point: Point
-}
+export { addDomEvent, isPrimaryPointer } from 'motion-dom'
+export type { EventInfo } from 'motion-dom'
 
 export type EventListenerWithPointInfo = (e: PointerEvent, info: EventInfo) => void
-
-export function isPrimaryPointer(event: PointerEvent) {
-  if (event.pointerType === 'mouse') {
-    return typeof event.button !== 'number' || event.button <= 0
-  } else {
-    /**
-     * isPrimary is true for all mice buttons, whereas every touch point
-     * is regarded as its own input. So subsequent concurrent touch points
-     * will be false.
-     *
-     * Specifically match against false here as incomplete versions of
-     * PointerEvents in very old browser might have it set as undefined.
-     */
-    return event.isPrimary !== false
-  }
-}
 
 export function extractEventInfo(
   event: PointerEvent,
@@ -37,16 +20,6 @@ export function extractEventInfo(
 
 function addPointerInfo(handler: EventListenerWithPointInfo): EventListener {
   return (event: PointerEvent) => isPrimaryPointer(event) && handler(event, extractEventInfo(event))
-}
-
-export function addDomEvent(
-  target: EventTarget,
-  eventName: string,
-  handler: EventListener,
-  options: AddEventListenerOptions = { passive: true },
-) {
-  target.addEventListener(eventName, handler, options)
-  return () => target.removeEventListener(eventName, handler)
 }
 
 export function addPointerEvent(

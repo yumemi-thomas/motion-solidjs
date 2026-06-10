@@ -13,10 +13,8 @@ import {
   collectMotionValues,
   frame,
   isMotionValue,
-  motionValue as createMotionValue,
+  motionValue,
 } from 'motion-dom'
-import { motionValue, isMotionValue as isMV } from 'motion-dom'
-import type { MotionValue as MV } from 'motion-dom'
 
 import { type MaybeAccessor, isAccessor, resolveAccessor } from '@/types'
 
@@ -264,7 +262,7 @@ export function createTime() {
  * @public
  */
 export function createVelocity(value: MotionValue<number>): MotionValue<number> {
-  const velocity = createMotionValue(value.getVelocity())
+  const velocity = motionValue(value.getVelocity())
 
   const updateVelocity = () => {
     const latest = value.getVelocity()
@@ -302,7 +300,7 @@ type AnyResolvedKeyframe = string | number
  * straight into the `attachFollow` effect would tear down and re-create the
  * animation on every change, restarting it and dropping spring velocity.
  */
-function bridgeAccessor<T extends AnyResolvedKeyframe>(accessor: () => T): MV<T> {
+function bridgeAccessor<T extends AnyResolvedKeyframe>(accessor: () => T): MotionValue<T> {
   const driver = motionValue(accessor())
   createEffect(() => {
     driver.set(accessor())
@@ -317,8 +315,8 @@ function bridgeAccessor<T extends AnyResolvedKeyframe>(accessor: () => T): MV<T>
  * plain values and existing `MotionValue`s pass through untouched.
  */
 function resolveFollowSource<T extends AnyResolvedKeyframe>(
-  source: MaybeAccessor<T> | MV<T>,
-): T | MV<T> {
+  source: MaybeAccessor<T> | MotionValue<T>,
+): T | MotionValue<T> {
   return isAccessor(source) ? bridgeAccessor(source) : source
 }
 
@@ -343,11 +341,11 @@ function resolveFollowSource<T extends AnyResolvedKeyframe>(
  * ```
  */
 export function createFollowValue<T extends AnyResolvedKeyframe>(
-  source: MaybeAccessor<T> | MV<T>,
+  source: MaybeAccessor<T> | MotionValue<T>,
   options: MaybeAccessor<FollowValueOptions> = {},
 ) {
   const resolved = resolveFollowSource(source)
-  const value = motionValue(isMV(resolved) ? resolved.get() : resolved)
+  const value = motionValue(isMotionValue(resolved) ? resolved.get() : resolved)
 
   let cleanup: VoidFunction | undefined
 
@@ -387,19 +385,19 @@ export function createFollowValue<T extends AnyResolvedKeyframe>(
  * ```
  */
 export function createSpring(
-  source: MaybeAccessor<number> | MV<number>,
+  source: MaybeAccessor<number> | MotionValue<number>,
   config?: MaybeAccessor<SpringOptions>,
-): MV<number>
+): MotionValue<number>
 export function createSpring(
-  source: MaybeAccessor<string> | MV<string>,
+  source: MaybeAccessor<string> | MotionValue<string>,
   config?: MaybeAccessor<SpringOptions>,
-): MV<string>
+): MotionValue<string>
 export function createSpring(
-  source: MaybeAccessor<string | number> | MV<string> | MV<number>,
+  source: MaybeAccessor<string | number> | MotionValue<string> | MotionValue<number>,
   config: MaybeAccessor<SpringOptions> = {},
 ) {
   const resolved = resolveFollowSource(source)
-  const value = motionValue(isMV(resolved) ? resolved.get() : resolved)
+  const value = motionValue(isMotionValue(resolved) ? resolved.get() : resolved)
 
   createEffect(() => {
     const cleanup = attachFollow(value, resolved, { type: 'spring', ...resolveAccessor(config) })

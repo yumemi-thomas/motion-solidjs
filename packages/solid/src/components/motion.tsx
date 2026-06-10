@@ -3,7 +3,7 @@ import { children, createMemo, Show, untrack, type JSX } from 'solid-js'
 import { isMotionValue, type MotionValue } from 'motion-dom'
 import type { FeatureBundle } from '@/features/dom-animation'
 import type { createVisualElement } from '@/features/dom-animation'
-import { updateLazyFeatures } from '@/features/lazy-features'
+import { installFeatureDefinitions } from '@/features/definitions'
 import { installMotionMachinery } from '@/motion/machinery'
 import { createMotionAttrs } from '@/motion/create-motion-attrs'
 import { useMotionValueChild } from '@/motion/use-motion-value-child'
@@ -208,7 +208,7 @@ const createMotionNamespace = (renderer?: typeof createVisualElement): MotionCom
 export function createMotionComponentWithFeatures(featureBundle?: FeatureBundle): MotionNameSpace {
   const renderer = featureBundle?.renderer
   if (featureBundle?.machinery) installMotionMachinery(featureBundle.machinery)
-  updateLazyFeatures(featureBundle?.features || [])
+  if (featureBundle) installFeatureDefinitions(featureBundle.features, featureBundle.projection)
   const namespace = createMotionNamespace(renderer)
 
   // Cast required: the proxy target only literally holds `create`; the

@@ -1,7 +1,6 @@
-import type { VisualElement } from 'motion-dom'
-import { createAnimationState, isAnimationControls } from 'motion-dom'
-import { createEffect, untrack } from 'solid-js'
-import type { MotionHandle } from '@/motion/create-motion'
+import { createAnimationState, Feature, isAnimationControls } from 'motion-dom'
+import type { MotionNodeOptions } from 'motion-dom'
+import { getMotionHandle, type MotionHandle } from '@/motion/create-motion'
 
 const STATE_TYPES = [
   'animate',
@@ -13,6 +12,20 @@ const STATE_TYPES = [
   'exit',
 ] as const
 export type StateType = (typeof STATE_TYPES)[number]
+
+/** Mirrors framer's `featureProps.animation` isEnabled list. */
+export function isAnimationEnabled(options: MotionNodeOptions): boolean {
+  return Boolean(
+    options.animate ||
+    options.variants ||
+    options.whileHover ||
+    options.whileTap ||
+    options.exit ||
+    options.whileInView ||
+    options.whileFocus ||
+    options.whileDrag,
+  )
+}
 
 /**
  * Run `animateChanges` on variant children that inherit `animate` from this
@@ -36,34 +49,63 @@ function cascadeAnimateChangesToInheritedChildren(handle: MotionHandle): void {
 }
 
 /**
- * Wire motion-dom's animation state machine to a {@link MotionHandle}'s
- * VisualElement.
+ * Wire motion-dom's animation state machine to the VisualElement.
  *
- * Mount phase queues a microtask that either subscribes to a user-provided
- * AnimationControls or runs the initial `animateChanges()` pass — deferred
- * so non-animation bindings settle first. Update phase re-runs
- * `animateChanges()` on opts changes after the first.
+ * Mount runs the initial `animateChanges()` pass via a connection-gated
+ * microtask (or subscribes a user-provided AnimationControls); `update()` —
+ * driven by create-motion's central feature pass on option changes —
+ * re-runs `animateChanges()` and cascades to inherited variant children.
  */
-export function createAnimation(
-  state: MotionHandle,
-  getOpts: () => MotionHandle['options'],
-): () => void {
-  if (state.options.motionConfig?.isStatic) return undefined
+export class AnimationFeature extends Feature<Element> {
+  private unmountControls?: () => void
+  private prevAnimate: unknown
+  private initialPassDone = false
+  private isStatic = false
 
-  // The state machine lives on the VE (`ve.animationState`) so motion-dom's
-  // variant cascade (animateVariant → variantChildren) drives the same state.
-  const ve = state.ensureVisualElement()
-  if (!ve) return undefined
-  // True ONLY for the LazyMotion async path (features arrive in a later task,
-  // after the initial mount window). Eager features bind synchronously inside
-  // `attach()` while `isInitialMountPending` is still true, so this is false
-  // for them — otherwise it would be true for every component (the ref sets
-  // `element` before any feature binds) and wrongly force `manuallyAnimateOnMount`,
-  // defeating the `initial={false}` mount-animation suppression. Mirrors upstream
-  // React's `hasMountedOnce` branch in use-visual-element.
-  const featureAttachedAfterMount = state.isMounted() && !state.isInitialMountPending
-  if (!ve.animationState) {
-    ve.animationState = createAnimationState(ve)
+  mount(): void {
+    const state = getMotionHandle(this.node)
+    if (!state) return
+    if (state.options.motionConfig?.isStatic) {
+      this.isStatic = true
+      return
+    }
+    const ve = this.node
+    // True ONLY for the LazyMotion async path (features arrive in a later task,
+    // after the initial mount window). Eager features mount synchronously inside
+    // `attach()` while `isInitialMountPending` is still true, so this is false
+    // for them — otherwise it would be true for every component (the ref sets
+    // `element` before any feature mounts) and wrongly force `manuallyAnimateOnMount`,
+    // defeating the `initial={false}` mount-animation suppression. Mirrors upstream
+    // React's `hasMountedOnce` branch in use-visual-element.
+    const featureAttachedAfterMount = state.isMounted() && !state.isInitialMountPending
+    if (!ve.animationState) {
+      ve.animationState = createAnimationState(ve)
+    }
+    this.prevAnimate = state.options.animate
+
+    const runInitialAnimationOnce = () => {
+      if (this.initialPassDone || !state.isMounted()) return
+      this.initialPassDone = true
+      // Upstream computes `manuallyAnimateOnMount = Boolean(parent && parent.current)`
+      // at VE construction — in React the parent ref is unattached during the
+      // initial tree render, so it's only true for nodes mounted later into an
+      // established tree. In Solid the parent element exists immediately, so
+      // recompute it here from the handle's mount bookkeeping: a pending initial
+      // ancestor means this node is part of a freshly-mounting subtree (the
+      // variant-controlling parent will cascade with stagger), not a late mount.
+      ve.manuallyAnimateOnMount =
+        featureAttachedAfterMount ||
+        Boolean(state.parent?.element && !state.hasPendingInitialParent())
+      // Always run the mount pass, even when a variant-controlling parent will
+      // cascade to this node: upstream's inherited-variant logic turns it into
+      // a no-op (`willAnimateViaParent`), and running it consumes
+      // `isInitialRender` — which the mount-time `initial === animate`
+      // suppression keys off. Skipping it would leave that suppression armed
+      // forever and swallow the first gesture-driven `setActive`.
+      ve.animationState?.animateChanges()
+      this.updateAnimationControlsSubscription()
+    }
+
     // create-motion.ts ships no-op defaults so its import graph stays free
     // of the animation engine — that subgraph only loads once a feature
     // bundle arrives.
@@ -83,68 +125,35 @@ export function createAnimation(
         }) ?? Promise.resolve()
       )
     }
-    state._replayHook = () => {
-      const animationState = state.visualElement?.animationState
-      animationState?.reset()
-      animationState?.animateChanges()
-    }
+
+    // Defer animateChanges to a microtask so gesture/projection/layout
+    // features settle first, then gate on connection: during CSR route
+    // changes the element may still be off-document, and motion-dom's
+    // keyframes resolver can't read baseline values from a disconnected
+    // element — opacity (and other style-read properties) would stay stuck
+    // at their initial. `onConnected` runs immediately when already connected.
+    queueMicrotask(() => {
+      if (state.isMounted()) state.onConnected(runInitialAnimationOnce)
+    })
   }
-  let unmountControls: (() => void) | undefined
 
-  const ensureVEForControls = (): VisualElement | undefined => state.ensureVisualElement()
-
-  const updateAnimationControlsSubscription = () => {
+  private updateAnimationControlsSubscription(): void {
+    const state = getMotionHandle(this.node)
+    if (!state) return
     const { animate } = state.options
     if (isAnimationControls(animate)) {
-      const controlsVE = ensureVEForControls()
-      if (!controlsVE) return
-      unmountControls?.()
-      unmountControls = animate.subscribe(controlsVE)
+      const ve = state.ensureVisualElement()
+      if (!ve) return
+      this.unmountControls?.()
+      this.unmountControls = animate.subscribe(ve)
     }
   }
 
-  let initialPassDone = false
-  const runInitialAnimationOnce = () => {
-    if (initialPassDone || !state.isMounted()) return
-    initialPassDone = true
-    runInitialAnimation()
-  }
-
-  const runInitialAnimation = () => {
-    // Upstream computes `manuallyAnimateOnMount = Boolean(parent && parent.current)`
-    // at VE construction — in React the parent ref is unattached during the
-    // initial tree render, so it's only true for nodes mounted later into an
-    // established tree. In Solid the parent element exists immediately, so
-    // recompute it here from the handle's mount bookkeeping: a pending initial
-    // ancestor means this node is part of a freshly-mounting subtree (the
-    // variant-controlling parent will cascade with stagger), not a late mount.
-    ve.manuallyAnimateOnMount =
-      featureAttachedAfterMount ||
-      Boolean(state.parent?.element && !state.hasPendingInitialParent())
-    // Always run the mount pass, even when a variant-controlling parent will
-    // cascade to this node: upstream's inherited-variant logic turns it into
-    // a no-op (`willAnimateViaParent`), and running it consumes
-    // `isInitialRender` — which the mount-time `initial === animate`
-    // suppression keys off. Skipping it would leave that suppression armed
-    // forever and swallow the first gesture-driven `setActive`.
-    ve.animationState?.animateChanges()
-    updateAnimationControlsSubscription()
-  }
-
-  // Defer animateChanges to a microtask so gesture/projection/layout
-  // bindings land first, then gate on connection: during CSR route changes
-  // the element may still be off-document, and motion-dom's keyframes
-  // resolver can't read baseline values from a disconnected element —
-  // opacity (and other style-read properties) would stay stuck at their
-  // initial. `onConnected` runs immediately when already connected.
-  queueMicrotask(() => {
-    if (state.isMounted()) state.onConnected(runInitialAnimationOnce)
-  })
-
-  let prevAnimate: unknown
-  const runUpdateAnimation = () => {
-    const opts = getOpts()
-    const animateChanged = opts.animate !== prevAnimate
+  update(): void {
+    if (this.isStatic) return
+    const state = getMotionHandle(this.node)
+    if (!state) return
+    const animateChanged = state.options.animate !== this.prevAnimate
     // When this node's `animate` changes, variant children that inherit it
     // need their own animateChanges to run — Solid won't re-render them on
     // the context change the way React does. Run the children BEFORE this
@@ -153,33 +162,14 @@ export function createAnimation(
     // values), which is what lets the parent's variant cascade through each
     // child's protected-keys gate.
     if (animateChanged) cascadeAnimateChangesToInheritedChildren(state)
-    ve.animationState?.animateChanges()
-    if (animateChanged) updateAnimationControlsSubscription()
-    prevAnimate = opts.animate
+    this.node.animationState?.animateChanges()
+    if (animateChanged) this.updateAnimationControlsSubscription()
+    this.prevAnimate = state.options.animate
   }
 
-  // Use plain createEffect (not `on(...)`): Solid's `on()` wrapper appears
-  // to swallow reactivity when the dep function returns through several
-  // layers of getter/spread in this setup.
-  let isFirst = true
-  createEffect(() => {
-    const opts = getOpts()
-    if (isFirst) {
-      isFirst = false
-      prevAnimate = opts.animate
-      return
-    }
-    untrack(runUpdateAnimation)
-  })
-
-  // Bridge for create-motion's owner effect to trigger an update without
-  // importing the animation engine.
-  state._animationUpdateHook = runUpdateAnimation
-
-  return () => {
-    ve.animationState?.reset()
-    state._animationUpdateHook = undefined
-    unmountControls?.()
-    unmountControls = undefined
+  unmount(): void {
+    this.node.animationState?.reset()
+    this.unmountControls?.()
+    this.unmountControls = undefined
   }
 }

@@ -7,17 +7,16 @@ import { injectLayoutGroup, injectMotion, provideMotion } from '@/components/con
 import type { MotionProps } from '@/components/motion'
 import { createMotionConfig } from '@/components/motion-config/context'
 import type { StateType } from '@/features/animation'
-import type { BindingFactory, createVisualElement } from '@/features/dom-animation'
+import type { createVisualElement } from '@/features/dom-animation'
 import type { MotionStateContext, Options } from '@/types'
 import { invariant, isSVGElement, warning } from '@/utils/is'
 import { resolveMotionProps } from '@/utils/resolve-motion-props'
 import {
-  createFeatureBindingController,
   createLazyMotionFeatureContext,
   createLazyMotionFeatureWatcher,
-  type FeatureBindingController,
-} from './feature-binding'
+} from './lazy-motion-features'
 import type { PresenceRegistration, PresenceRegistrationLifecycle } from './presence-registration'
+import { initHandleProjection } from './projection-init'
 import { requestRootProjectionUpdate } from './root-projection-update'
 import { motionMachinery } from './machinery'
 import { resolveMotionDomProps } from './motion-dom-props'
@@ -86,15 +85,27 @@ export interface MotionHandle {
   ensureVisualElement(): VisualElement<Element> | undefined
 
   // ---- Extension slots (writable) -----------------------------------------
+  // getSnapshot/didUpdate are the Solid analogue of React's
+  // getSnapshotBeforeUpdate/componentDidUpdate pair that framer's
+  // MeasureLayout rides on: the layout feature rebinds them, and the
+  // create-motion lifecycle invokes them around option updates.
   getSnapshot: GetSnapshotHook
   didUpdate: DidUpdateHook
-  _replayHook?: () => void
   _staticReplayHook?: () => void
-  _animationUpdateHook?: () => void
 }
 
 /** Public registry for tests and cross-subtree feature lookup. */
 export const mountedStates = new WeakMap<Element, MotionHandle>()
+
+/**
+ * VisualElement → MotionHandle. Feature classes receive the VE (`this.node`,
+ * motion-dom's contract) and reach the Solid-side handle through here.
+ */
+const visualElementHandles = new WeakMap<VisualElement<Element>, MotionHandle>()
+
+export function getMotionHandle(ve: VisualElement<Element>): MotionHandle | undefined {
+  return visualElementHandles.get(ve)
+}
 
 // Leak guard for the connection poll (~1s at 60fps). The realistic path
 // connects within a frame or two; this only bounds a subtree that is created
@@ -103,7 +114,6 @@ const MAX_CONNECTION_FRAMES = 60
 
 type HandleOptions = ResolvedOptions & {
   presenceContext?: PresenceContext
-  features?: BindingFactory[]
 }
 
 function isElement(value: unknown): value is Element {
@@ -206,9 +216,18 @@ function createMotionHandle(
 
   let latestValues: ResolvedValues = resolveInitialValues(options, getContext())
 
-  let featureBindings: FeatureBindingController | undefined
-
-  const updateFeatures = () => featureBindings?.update()
+  // Drive motion-dom's feature lifecycle: instantiate/mount/update the
+  // Feature classes registered via setFeatureDefinitions. Projection is
+  // per-VE infrastructure rather than a prop-gated feature (ancestors'
+  // transforms participate in descendants' measurements), so it's
+  // created/refreshed first, through the domMax-installed slot.
+  const updateFeatures = () => {
+    if (!element) return
+    const visualElement = visualLifecycle.get()
+    if (!visualElement) return
+    initHandleProjection(handle)
+    visualElement.updateFeatures()
+  }
 
   const visualLifecycle = createVisualElementLifecycle({
     initialRenderer: config.renderer,
@@ -235,10 +254,14 @@ function createMotionHandle(
       Object.assign(latestValues, resolveLateStyleMotionValues(options, getContext()))
     }
     visualLifecycle.init(r)
+    const visualElement = visualLifecycle.get()
+    if (visualElement) visualElementHandles.set(visualElement, handle)
   }
 
   const ensureVisualElement = (): VisualElement<Element> | undefined => {
-    return visualLifecycle.ensure()
+    const visualElement = visualLifecycle.ensure()
+    if (visualElement) visualElementHandles.set(visualElement, handle)
+    return visualElement
   }
 
   const setActive = (name: StateType, isActive: boolean): Promise<void> => {
@@ -258,7 +281,10 @@ function createMotionHandle(
       visualLifecycle.setLatestValue(key, value)
     }
     visualLifecycle.render()
-    handle._replayHook?.()
+    // Re-run the mount pass so the replayed initial → animate transition
+    // dispatches (presence re-entry, static replay).
+    visualElement?.animationState?.reset()
+    visualElement?.animationState?.animateChanges()
     updateFeatures()
   }
 
@@ -295,6 +321,9 @@ function createMotionHandle(
     }
     mountedStates.set(el, handle)
     element = el
+    // With a renderer available every motion node owns a VE (framer parity —
+    // use-visual-element constructs one per component); features hang off it.
+    ensureVisualElement()
     visualLifecycle.mount(el)
     visualLifecycle.render()
     pruneDisconnectedChildren(visualLifecycle.get())
@@ -318,7 +347,7 @@ function createMotionHandle(
     connectionRaf = undefined
     connectedCallbacks.length = 0
     presenceRegistration?.unregister()
-    featureBindings?.dispose()
+    // VE unmount also unmounts all mounted features.
     visualLifecycle.unmount()
     element = null
     hasAttached = false
@@ -350,8 +379,10 @@ function createMotionHandle(
     }
     untrack(() => {
       pruneDisconnectedChildren(visualLifecycle.get())
+      // Runs each mounted feature's update() (animation dispatch, gesture
+      // re-config, projection setOptions) — the Solid analogue of React's
+      // post-commit updateFeatures call.
       updateFeatures()
-      handle._animationUpdateHook?.()
       handle.didUpdate()
     })
   })
@@ -470,7 +501,6 @@ function createMotionHandle(
   }
 
   parent?.children.add(handle)
-  featureBindings = createFeatureBindingController(handle, getOpts)
   return handle
 }
 
@@ -548,6 +578,15 @@ export function createMotion(props: MotionProps, options: CreateMotionOptions = 
     type: options.type,
   })
   provideMotion(state)
+  // Eagerly re-read the merged props on every change. The spread consumer
+  // evaluates `motionAttrs` through a lazy memo whose dependency set can be
+  // collected in a context that misses prop reads (leaving the style spread
+  // stale until the next frame render); a hot subscriber re-evaluating the
+  // full props each flush keeps that evaluation fresh. The pre-Feature
+  // architecture got this incidentally from per-feature getOpts effects.
+  createEffect(() => {
+    getMotionProps()
+  })
   createLazyMotionFeatureWatcher(state, lazyMotionContext)
 
   function getAttrs() {

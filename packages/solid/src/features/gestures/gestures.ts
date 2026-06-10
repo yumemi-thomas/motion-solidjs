@@ -1,10 +1,9 @@
 import { inView } from 'motion'
-import { frame, hover, press } from 'motion-dom'
-import type { EventInfo, VariantLabels } from 'motion-dom'
-import { createEffect } from 'solid-js'
+import { Feature, frame, hover, press } from 'motion-dom'
+import type { EventInfo, MotionNodeOptions, VariantLabels } from 'motion-dom'
 
 import { addDomEvent, extractEventInfo } from '@/events'
-import type { MotionHandle } from '@/motion/create-motion'
+import { getMotionHandle, type MotionHandle } from '@/motion/create-motion'
 import type { VariantType } from '@/types'
 
 // ---------- Public prop types ----------
@@ -63,23 +62,46 @@ export interface InViewProps {
   onViewportLeave?: ViewportEventHandler
 }
 
-// ---------- Functional gesture bindings ----------
-// Synchronous reads inside event handlers go through `state.options`
-// (untracked) since those callbacks run outside any tracking scope.
+// ---------- isEnabled lists (mirror framer's featureProps) ----------
 
-function bindHover(state: MotionHandle, getOpts: () => MotionHandle['options']): () => void {
-  let remove: VoidFunction | undefined
+const hoverProps = ['whileHover', 'onHoverStart', 'onHoverEnd'] as const
+const pressProps = ['whileTap', 'onTap', 'onTapStart', 'onTapCancel'] as const
+const focusProps = ['whileFocus'] as const
+const inViewProps = ['whileInView', 'onViewportEnter', 'onViewportLeave'] as const
 
-  const register = () => {
-    remove?.()
-    remove = undefined
-    const element = state.element
-    if (!element) return
+export function isHoverEnabled(options: MotionNodeOptions): boolean {
+  return hoverProps.some((name) => Boolean(options[name]))
+}
+
+export function isPressEnabled(options: MotionNodeOptions): boolean {
+  return pressProps.some((name) => Boolean(options[name]))
+}
+
+export function isFocusEnabled(options: MotionNodeOptions): boolean {
+  return focusProps.some((name) => Boolean(options[name]))
+}
+
+export function isInViewEnabled(options: MotionNodeOptions): boolean {
+  return inViewProps.some((name) => Boolean(options[name]))
+}
+
+// ---------- Feature classes ----------
+// Listeners register once on mount and read the handle's current options in
+// their callbacks (framer parity: a removed `while*` prop leaves the gesture
+// mounted but its dispatch becomes a no-op).
+
+export class HoverGesture extends Feature<Element> {
+  private remove?: VoidFunction
+
+  mount(): void {
+    const state = getMotionHandle(this.node)
+    const element = state?.element
+    if (!state || !element) return
     // motion-dom's setupGesture branches on `instanceof EventTarget` — that
     // check is false in happy-dom because happy-dom's Element doesn't extend
     // the global EventTarget. Passing an array takes the iterable branch
     // (`Array.from(...)`), which works in both happy-dom and real browsers.
-    remove = hover([element], (_el, startEvent) => {
+    this.remove = hover([element], (_el, startEvent) => {
       const props = state.options
       state.setActive('whileHover', true)
       if (props.onHoverStart) {
@@ -93,34 +115,23 @@ function bindHover(state: MotionHandle, getOpts: () => MotionHandle['options']):
     })
   }
 
-  createEffect(() => {
-    const { whileHover, onHoverStart, onHoverEnd } = getOpts()
-    if (whileHover || onHoverStart || onHoverEnd) {
-      register()
-    } else {
-      remove?.()
-      remove = undefined
-    }
-  })
-
-  return () => {
-    remove?.()
-    remove = undefined
+  unmount(): void {
+    this.remove?.()
+    this.remove = undefined
   }
 }
 
-function bindPress(state: MotionHandle, getOpts: () => MotionHandle['options']): () => void {
-  let remove: VoidFunction | undefined
+export class PressGesture extends Feature<Element> {
+  private remove?: VoidFunction
 
-  const register = () => {
-    remove?.()
-    remove = undefined
-    const element = state.element
-    if (!element) return
+  mount(): void {
+    const state = getMotionHandle(this.node)
+    const element = state?.element
+    if (!state || !element) return
     // Disabled form controls never fire press (matches motion/react's
     // PressGesture, which bails when the element is a disabled <button>).
     const isDisabled = () => element instanceof HTMLButtonElement && element.disabled
-    remove = press(
+    this.remove = press(
       [element],
       (_el, startEvent) => {
         if (isDisabled()) return
@@ -144,83 +155,72 @@ function bindPress(state: MotionHandle, getOpts: () => MotionHandle['options']):
     )
   }
 
-  createEffect(() => {
-    const { whileTap, onTap, onTapCancel, onTapStart } = getOpts()
-    if (whileTap || onTap || onTapCancel || onTapStart) {
-      register()
-    } else {
-      remove?.()
-      remove = undefined
-    }
-  })
-
-  return () => {
-    remove?.()
-    remove = undefined
+  unmount(): void {
+    this.remove?.()
+    this.remove = undefined
   }
 }
 
-function bindFocus(state: MotionHandle, _getOpts: () => MotionHandle['options']): () => void {
-  let isFocused = false
-  let remove: VoidFunction | undefined
+export class FocusGesture extends Feature<Element> {
+  private isFocused = false
+  private remove?: VoidFunction
 
-  // matches(':focus-visible') throws in browsers without focus-visible support;
-  // treat that as "focused" so whileFocus still fires.
-  const onFocus = () => {
-    const element = state.element
-    if (!element) return
-    let isFocusVisible = false
-    try {
-      isFocusVisible = element.matches(':focus-visible')
-    } catch {
-      isFocusVisible = true
+  mount(): void {
+    const state = getMotionHandle(this.node)
+    const element = state?.element
+    if (!state || !element) return
+
+    // matches(':focus-visible') throws in browsers without focus-visible
+    // support; treat that as "focused" so whileFocus still fires.
+    const onFocus = () => {
+      let isFocusVisible = false
+      try {
+        isFocusVisible = element.matches(':focus-visible')
+      } catch {
+        isFocusVisible = true
+      }
+      if (!isFocusVisible) return
+      state.setActive('whileFocus', true)
+      this.isFocused = true
     }
-    if (!isFocusVisible) return
-    state.setActive('whileFocus', true)
-    isFocused = true
-  }
 
-  const onBlur = () => {
-    if (!isFocused) return
-    state.setActive('whileFocus', false)
-    isFocused = false
-  }
+    const onBlur = () => {
+      if (!this.isFocused) return
+      state.setActive('whileFocus', false)
+      this.isFocused = false
+    }
 
-  // Focus listeners attach unconditionally — the gesture state machine
-  // gates whether `whileFocus` actually fires based on the current opts.
-  // (Matches motion-react's behavior: focus handlers are always attached
-  // so a future re-enable of `whileFocus` doesn't miss intervening focus.)
-  if (state.element) {
-    const removeFocus = addDomEvent(state.element, 'focus', onFocus)
-    const removeBlur = addDomEvent(state.element, 'blur', onBlur)
-    remove = () => {
+    const removeFocus = addDomEvent(element, 'focus', onFocus)
+    const removeBlur = addDomEvent(element, 'blur', onBlur)
+    this.remove = () => {
       removeFocus()
       removeBlur()
     }
   }
 
-  return () => {
-    remove?.()
-    remove = undefined
+  unmount(): void {
+    this.remove?.()
+    this.remove = undefined
   }
 }
 
 const observerOptionNames: Array<keyof ViewportOptions> = ['amount', 'margin', 'root']
 
-function bindInView(state: MotionHandle, getOpts: () => MotionHandle['options']): () => void {
-  let remove: VoidFunction | undefined
-  let prevViewport: MotionHandle['options']['viewport']
+export class InViewFeature extends Feature<Element> {
+  private remove?: VoidFunction
+  private prevViewport: MotionHandle['options']['viewport']
 
-  const start = () => {
+  private start(): void {
+    const state = getMotionHandle(this.node)
+    const element = state?.element
+    if (!state || !element) return
     const viewport = state.options.viewport
-    prevViewport = viewport
-    const element = state.element
-    remove?.()
-    remove = undefined
-    if (!element) return
+    this.prevViewport = viewport
+    this.remove?.()
+    this.remove = undefined
 
     const { once, ...viewOptions } = viewport || {}
-    remove = inView(
+    this.remove = inView(
       element,
       (_, entry) => {
         const props = state.options
@@ -240,42 +240,21 @@ function bindInView(state: MotionHandle, getOpts: () => MotionHandle['options'])
     )
   }
 
-  createEffect(() => {
-    const opts = getOpts()
-    const active = Boolean(opts.whileInView || opts.onViewportEnter || opts.onViewportLeave)
-    const viewportChanged = observerOptionNames.some(
-      (name) => opts.viewport?.[name] !== prevViewport?.[name],
-    )
-    if (active && (!remove || viewportChanged)) {
-      start()
-    } else if (!active) {
-      remove?.()
-      remove = undefined
-    }
-  })
-
-  return () => {
-    remove?.()
-    remove = undefined
+  mount(): void {
+    this.start()
   }
-}
 
-// ---------- Aggregate primitive ----------
+  update(): void {
+    const state = getMotionHandle(this.node)
+    if (!state) return
+    const viewportChanged = observerOptionNames.some(
+      (name) => state.options.viewport?.[name] !== this.prevViewport?.[name],
+    )
+    if (viewportChanged) this.start()
+  }
 
-/**
- * Wire hover, press, focus and viewport (whileInView) gestures to a
- * MotionHandle. Each sub-binding owns its own Solid effect; the returned
- * cleanup tears them all down.
- */
-export function createGestures(
-  state: MotionHandle,
-  getOpts: () => MotionHandle['options'],
-): () => void {
-  const cleanups = [
-    bindHover(state, getOpts),
-    bindPress(state, getOpts),
-    bindFocus(state, getOpts),
-    bindInView(state, getOpts),
-  ]
-  return () => cleanups.forEach((c) => c())
+  unmount(): void {
+    this.remove?.()
+    this.remove = undefined
+  }
 }

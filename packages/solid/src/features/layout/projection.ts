@@ -5,7 +5,6 @@ import {
   globalProjectionState,
   rootProjectionNode,
 } from 'motion-dom'
-import { createEffect } from 'solid-js'
 import { getClosestProjectingNode } from '@/features/layout/utils'
 import { defaultScaleCorrector } from '@/features/layout/config'
 import type { MotionHandle } from '@/motion/create-motion'
@@ -39,18 +38,19 @@ function ensureRootProjectionUpdater() {
  * drives shared-layout transitions and reads/writes element bounding boxes
  * for layout/layoutId/drag.
  *
- * Mounts the projection synchronously, then re-applies setOptions whenever
- * the layout-related opts change.
+ * Projection is per-VisualElement infrastructure rather than a prop-gated
+ * feature: ancestors' transforms participate in descendants' measurements,
+ * so every node gets a node once domMax is installed (upstream parity with
+ * use-visual-element's createProjectionNode). Idempotent — the first call
+ * creates and mounts the projection node; every call re-applies setOptions,
+ * driven by create-motion's feature pass on option changes.
  */
-export function createProjection(
-  state: MotionHandle,
-  getOpts: () => MotionHandle['options'],
-): () => void {
-  // HTMLProjectionNode anchors to ve.latestValues and walks the VE parent
-  // chain, so projection always needs a VE.
-  if (!state.ensureVisualElement()) return undefined
+export function createProjection(state: MotionHandle): void {
+  const visualElement = state.ensureVisualElement()
+  if (!visualElement) return
   ensureRootProjectionUpdater()
-  let projection: IProjectionNode | undefined
+  const isFirstRun = !visualElement.projection
+  let projection: IProjectionNode | undefined = visualElement.projection
 
   const setOptions = () => {
     const options = state.options
@@ -65,7 +65,7 @@ export function createProjection(
       layout,
       layoutId,
       alwaysMeasureLayout: Boolean(layoutId) || Boolean(drag) || isRefConstraint,
-      visualElement: state.visualElement,
+      visualElement,
       animationType: typeof options.layout === 'string' ? options.layout : 'both',
       // initialPromotionConfig
       layoutRoot: options.layoutRoot,
@@ -80,13 +80,11 @@ export function createProjection(
 
   const initProjection = () => {
     const options = state.options
-    state.visualElement.projection = new HTMLProjectionNode(
-      state.visualElement.latestValues,
-      options['data-framer-portal-id']
-        ? undefined
-        : getClosestProjectingNode(state.visualElement.parent),
+    visualElement.projection = new HTMLProjectionNode(
+      visualElement.latestValues,
+      options['data-framer-portal-id'] ? undefined : getClosestProjectingNode(visualElement.parent),
     )
-    projection = state.visualElement.projection
+    projection = visualElement.projection
     projection.isPresent = true
     setOptions()
     // Guard against transient DOM detachment.
@@ -103,6 +101,11 @@ export function createProjection(
       }
       return origUpdateLayout()
     }
+  }
+
+  if (!isFirstRun) {
+    setOptions()
+    return
   }
 
   addScaleCorrector(defaultScaleCorrector)
@@ -122,15 +125,5 @@ export function createProjection(
         projection.updateLayout()
       })
     }
-  }
-
-  createEffect(() => {
-    // Touch the opts to subscribe; setOptions reads via state.options.
-    getOpts()
-    if (projection) setOptions()
-  })
-
-  return () => {
-    // Projection cleanup happens in motion-dom on VE unmount.
   }
 }

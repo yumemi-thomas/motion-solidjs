@@ -1,6 +1,16 @@
 import { HTMLVisualElement, SVGVisualElement } from 'motion-dom'
-import { createAnimation } from '@/features/animation'
-import { createGestures } from '@/features/gestures/gestures'
+import { AnimationFeature, isAnimationEnabled } from '@/features/animation'
+import type { FeatureDefinitions } from '@/features/definitions'
+import {
+  FocusGesture,
+  HoverGesture,
+  InViewFeature,
+  PressGesture,
+  isFocusEnabled,
+  isHoverEnabled,
+  isInViewEnabled,
+  isPressEnabled,
+} from '@/features/gestures/gestures'
 import { isSVGElement } from '@/utils/is'
 import type { MotionHandle } from '@/motion/create-motion'
 import type { MotionMachinery } from '@/motion/machinery'
@@ -11,32 +21,25 @@ export function createVisualElement(Component: AsTag, options: any) {
   return isSVGElement(Component) ? new SVGVisualElement(options) : new HTMLVisualElement(options)
 }
 
-/**
- * A factory that wires a {@link MotionHandle} into the Solid effect graph,
- * returning a cleanup that the handle invokes on detach.
- *
- * Each factory owns its own reactivity: it subscribes to the relevant
- * `getOpts` reads via `createEffect`, manages DOM listeners or animation
- * subscriptions, and cleans up via the returned function (or via internal
- * `onCleanup` calls — both fire when the handle's owner disposes).
- *
- * Features should never reach beyond the {@link MotionHandle} surface
- * for synchronous reads; for reactive subscription, accept `getOpts`.
- */
-export type BindingFactory = (
-  handle: MotionHandle,
-  getOpts: () => MotionHandle['options'],
-) => (() => void) | undefined
-
 export interface FeatureBundle {
   renderer: typeof createVisualElement
-  features: Array<BindingFactory>
   /**
-   * Handle machinery (MotionValue registry, style writer, presence
-   * registration) installed globally when the bundle registers. Bare `m`
-   * ships without it and renders statically until then — mirroring
-   * motion/react — which keeps motion-dom's MotionValue/frameloop out of
-   * the bare-`m` bundle.
+   * Feature definitions merged into motion-dom's global registry
+   * (`setFeatureDefinitions`); `VisualElement.updateFeatures` instantiates
+   * each per node when `isEnabled(props)` matches.
+   */
+  features: FeatureDefinitions
+  /**
+   * Per-VE projection initializer, carried by bundles with layout/drag.
+   * Projection isn't prop-gated — every node participates in the projection
+   * tree — so it installs into a slot the core handle drives directly.
+   */
+  projection?: (handle: MotionHandle) => void
+  /**
+   * Handle machinery (AnimatePresence registration) installed globally when
+   * the bundle registers. Bare `m` ships without it and renders statically
+   * until then — mirroring motion/react — which keeps motion-dom's
+   * frameloop out of the bare-`m` bundle.
    */
   machinery?: MotionMachinery
 }
@@ -47,6 +50,17 @@ export interface FeatureBundle {
  */
 export const motionHandleMachinery: MotionMachinery = {
   createPresenceRegistration,
+}
+
+const animationDefinitions: FeatureDefinitions = {
+  animation: { isEnabled: isAnimationEnabled, Feature: AnimationFeature },
+}
+
+const gestureDefinitions: FeatureDefinitions = {
+  hover: { isEnabled: isHoverEnabled, Feature: HoverGesture },
+  tap: { isEnabled: isPressEnabled, Feature: PressGesture },
+  focus: { isEnabled: isFocusEnabled, Feature: FocusGesture },
+  inView: { isEnabled: isInViewEnabled, Feature: InViewFeature },
 }
 
 /**
@@ -64,7 +78,7 @@ export const motionHandleMachinery: MotionMachinery = {
  */
 export const domAnimation: FeatureBundle = {
   renderer: createVisualElement,
-  features: [createAnimation, createGestures],
+  features: { ...animationDefinitions, ...gestureDefinitions },
   machinery: motionHandleMachinery,
 }
 
@@ -82,6 +96,6 @@ export const domAnimation: FeatureBundle = {
  */
 export const domMin: FeatureBundle = {
   renderer: createVisualElement,
-  features: [createAnimation],
+  features: animationDefinitions,
   machinery: motionHandleMachinery,
 }

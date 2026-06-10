@@ -3,7 +3,7 @@ import { motionValue, type MotionValue } from 'motion-dom'
 import { createRoot, createSignal, onMount } from 'solid-js'
 import { afterEach, describe, expect, it } from 'vitest'
 import { motion } from '@/components'
-import { createMotionTemplate } from '@/primitives/values'
+import { createMotionTemplate } from '@/primitives'
 import { delay } from '#tests/utils'
 
 afterEach(() => cleanup())

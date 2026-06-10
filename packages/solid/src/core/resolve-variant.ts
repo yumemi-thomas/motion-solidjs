@@ -12,7 +12,45 @@ import type { Options, VariantType } from '@/types'
 // Returns the raw variant object (preserving `transition` and `transitionEnd`
 // keys). Callers needing only target keys destructure them off.
 
-export function resolveVariant(
+function valueIsDefined(value: unknown) {
+  return value !== undefined && value !== null
+}
+
+/**
+ * Resolve a definition to the values it owns: target keys merged with
+ * `transitionEnd` keys, the `transition`/`transitionEnd` config props
+ * stripped. The initial-paint path and the style-ownership filter both
+ * reason about this shape — keep them on this one resolver.
+ */
+export function resolveDefinitionTarget(
+  definition: Options['animate'] | undefined,
+  variants: Variants | undefined,
+  custom?: unknown,
+) {
+  const resolved = resolveVariant(definition, variants, custom)
+  if (!resolved) return undefined
+  const { transition, transitionEnd, ...target } = resolved
+  return { ...target, ...transitionEnd }
+}
+
+/**
+ * Whether an `initial`/`animate` definition owns `key`. Resolves variant
+ * labels (and label arrays) against `variants` — so a value controlled by
+ * e.g. `animate="active"` is recognised as owned by the animation and a
+ * plain `style` value for the same key isn't applied over it.
+ */
+export function targetDefinesKey(
+  target: Options['initial'],
+  key: string,
+  variants: Options['variants'],
+  custom: unknown,
+): boolean {
+  if (!valueIsDefined(target) || typeof target === 'boolean') return false
+  const resolved = resolveDefinitionTarget(target, variants, custom)
+  return Boolean(resolved && valueIsDefined(resolved[key]))
+}
+
+function resolveVariant(
   definition: Options['animate'] | undefined,
   variants: Variants | undefined,
   custom?: unknown,

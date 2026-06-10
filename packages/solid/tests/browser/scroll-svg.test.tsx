@@ -2,7 +2,7 @@ import { cleanup, render } from '@solidjs/testing-library'
 import { createSignal } from 'solid-js'
 import { afterEach, describe, expect, it } from 'vitest'
 import { createScroll } from '@/primitives/create-scroll'
-import { createMotionValueEvent } from '@/primitives/values'
+import { createMotionValueEvent } from '@/primitives'
 import { wait } from './helpers'
 
 afterEach(() => {

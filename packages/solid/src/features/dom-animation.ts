@@ -5,19 +5,21 @@ import {
   motionHandleMachinery,
   type FeatureBundle,
 } from '@/features/dom-min'
-import { FocusGesture, isFocusEnabled } from '@/features/gestures/focus'
-import { HoverGesture, isHoverEnabled } from '@/features/gestures/hover'
-import { InViewFeature, isInViewEnabled } from '@/features/gestures/in-view'
-import { PressGesture, isPressEnabled } from '@/features/gestures/press'
+import { focusFeatureDefinition } from '@/features/gestures/focus'
+import { hoverFeatureDefinition } from '@/features/gestures/hover'
+import { inViewFeatureDefinition } from '@/features/gestures/in-view'
+import { pressFeatureDefinition } from '@/features/gestures/press'
 
 export { createVisualElement, domMin, motionHandleMachinery } from '@/features/dom-min'
 export type { FeatureBundle } from '@/features/dom-min'
 
+// Kept out of dom-min's import graph: class heritage defeats tree-shaking
+// (see domMin's doc).
 const gestureDefinitions: FeatureDefinitions = {
-  hover: { isEnabled: isHoverEnabled, Feature: HoverGesture },
-  tap: { isEnabled: isPressEnabled, Feature: PressGesture },
-  focus: { isEnabled: isFocusEnabled, Feature: FocusGesture },
-  inView: { isEnabled: isInViewEnabled, Feature: InViewFeature },
+  hover: hoverFeatureDefinition,
+  tap: pressFeatureDefinition,
+  focus: focusFeatureDefinition,
+  inView: inViewFeatureDefinition,
 }
 
 /**

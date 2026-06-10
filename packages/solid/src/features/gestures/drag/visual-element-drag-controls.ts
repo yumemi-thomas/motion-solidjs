@@ -1,3 +1,8 @@
+// Port of framer-motion's gestures/drag/VisualElementDragControls.ts (not
+// exported by motion-dom), kept line-comparable with upstream, quirks
+// included — check drift when bumping the motion peer range. Solid-specific
+// additions: accessor-form dragConstraints and the layout-shift compensation
+// (drag/layout-compensation.ts).
 import { addDomEvent, addPointerEvent, extractEventInfo } from '@/events'
 import {
   applyConstraints,
@@ -8,17 +13,13 @@ import {
   rebaseAxisConstraints,
   resolveDragElastic,
 } from '@/features/gestures/drag/constraints'
+import { DragLayoutCompensator } from '@/features/gestures/drag/layout-compensation'
 import type { DragHandlers, DragProps, ResolvedConstraints } from '@/features/gestures/drag/types'
 import type { PanInfo } from '@/features/gestures/pan'
 import { PanSession } from '@/features/gestures/pan'
 import { getContextWindow } from '@/utils'
 import { isHTMLElement } from '@/utils/is'
-import type {
-  AnimationGeneratorType,
-  LayoutUpdateData,
-  Transition,
-  VisualElement,
-} from 'motion-dom'
+import type { AnimationGeneratorType, LayoutUpdateData, Transition } from 'motion-dom'
 import {
   addValueToWillChange,
   animateMotionValue,
@@ -39,8 +40,6 @@ import { invariant } from '@/utils/is'
 import type { MotionHandle } from '@/core/create-motion'
 import type { MotionProps } from '@/components'
 import type { Axis, BoundingBox, Point } from 'motion-utils'
-
-const elementDragControls = new WeakMap<VisualElement, VisualElementDragControls>()
 
 export interface DragControlOptions {
   snapToCursor?: boolean
@@ -86,9 +85,17 @@ export class VisualElementDragControls {
   private currentDirection: DragDirection | null = null
 
   private originPoint: Point = { x: 0, y: 0 }
-  private latestDragBox: { left: number; top: number } | undefined
-  private hasPointerMovedThisFrame = false
-  private layoutCompensationFrame: number | undefined
+  private layoutCompensation = new DragLayoutCompensator({
+    getElement: () => this.state.element,
+    isDragging: () => this.isDragging,
+    applyAxisShift: (axis, shift) => {
+      const motionValue = this.getAxisMotionValue(axis)
+      if (!motionValue) return
+      this.originPoint[axis] -= shift
+      motionValue.set(motionValue.get() - shift)
+    },
+    render: () => this.visualElement.render(),
+  })
 
   /**
    * The permitted boundaries of travel, in pixels.
@@ -178,7 +185,7 @@ export class VisualElementDragControls {
       addValueToWillChange(this.visualElement, 'transform')
 
       this.state.setActive('whileDrag', true)
-      this.startLayoutCompensation()
+      this.layoutCompensation.start()
     }
 
     const onMove = (event: PointerEvent, info: PanInfo) => {
@@ -210,8 +217,7 @@ export class VisualElementDragControls {
        * bounding box to ensure the pointer and element don't fall out of sync.
        */
       this.visualElement.render()
-      this.hasPointerMovedThisFrame = true
-      this.latestDragBox = this.readDragBox()
+      this.layoutCompensation.notePointerMove()
 
       /**
        * This must fire after the render call as it might trigger a state
@@ -267,7 +273,7 @@ export class VisualElementDragControls {
 
   cancel() {
     this.isDragging = false
-    this.stopLayoutCompensation()
+    this.layoutCompensation.stop()
     const { projection } = this.visualElement
     if (projection) {
       projection.isAnimationBlocked = false
@@ -282,62 +288,6 @@ export class VisualElementDragControls {
     }
 
     this.state.setActive('whileDrag', false)
-  }
-
-  private startLayoutCompensation() {
-    this.latestDragBox = this.readDragBox()
-    this.layoutCompensationFrame = window.requestAnimationFrame(this.compensateLayoutShift)
-  }
-
-  private stopLayoutCompensation() {
-    if (this.layoutCompensationFrame !== undefined) {
-      window.cancelAnimationFrame(this.layoutCompensationFrame)
-      this.layoutCompensationFrame = undefined
-    }
-    this.latestDragBox = undefined
-    this.hasPointerMovedThisFrame = false
-  }
-
-  private compensateLayoutShift = () => {
-    this.layoutCompensationFrame = undefined
-    if (!this.isDragging || !this.state.element) return
-
-    const latest = this.readDragBox()
-    const previous = this.latestDragBox
-    if (!latest) return
-
-    if (!this.hasPointerMovedThisFrame && previous) {
-      const delta = {
-        x: latest.left - previous.left,
-        y: latest.top - previous.top,
-      }
-      eachAxis((axis) => {
-        const shift = delta[axis]
-        if (!shift) return
-        const motionValue = this.getAxisMotionValue(axis)
-        if (!motionValue) return
-        this.originPoint[axis] -= shift
-        motionValue.set(motionValue.get() - shift)
-      })
-
-      if (delta.x || delta.y) {
-        this.visualElement.render()
-        this.latestDragBox = this.readDragBox()
-      } else {
-        this.latestDragBox = latest
-      }
-    } else {
-      this.latestDragBox = latest
-    }
-
-    this.hasPointerMovedThisFrame = false
-    this.layoutCompensationFrame = window.requestAnimationFrame(this.compensateLayoutShift)
-  }
-
-  private readDragBox() {
-    if (!this.state.element) return undefined
-    const box = this.state.element.getBoundingClientRect()
-    return { left: box.left, top: box.top }
   }
 
   private updateAxis(axis: DragDirection, _point: Point, offset?: Point) {
@@ -629,7 +579,6 @@ export class VisualElementDragControls {
 
   addListeners() {
     if (!this.state.element) return
-    elementDragControls.set(this.visualElement, this)
     const element = this.state.element
 
     /**

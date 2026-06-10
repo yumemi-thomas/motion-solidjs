@@ -1,8 +1,9 @@
 import { inView } from 'motion'
-import { Feature, frame } from 'motion-dom'
 import type { MotionNodeOptions, VariantLabels } from 'motion-dom'
 
 import { getMotionHandle, type MotionHandle } from '@/core/create-motion'
+import type { FeatureDefinition } from '@/features/definitions'
+import { ElementGestureFeature, schedulePostRender } from '@/features/gestures/utils'
 import type { VariantType } from '@/types'
 
 type MarginValue = `${number}${'px' | '%'}`
@@ -31,7 +32,7 @@ export interface InViewProps {
 /** Mirrors framer's `featureProps.inView` isEnabled list. */
 const inViewProps = ['whileInView', 'onViewportEnter', 'onViewportLeave'] as const
 
-export function isInViewEnabled(options: MotionNodeOptions): boolean {
+function isInViewEnabled(options: MotionNodeOptions): boolean {
   return inViewProps.some((name) => Boolean(options[name]))
 }
 
@@ -41,42 +42,28 @@ export function isInViewEnabled(options: MotionNodeOptions): boolean {
  */
 const observerOptionNames: Array<keyof ViewportOptions> = ['amount', 'margin', 'root']
 
-export class InViewFeature extends Feature<Element> {
-  private remove?: VoidFunction
+class InViewFeature extends ElementGestureFeature {
   private prevViewport: MotionHandle['options']['viewport']
 
-  private start(): void {
-    const state = getMotionHandle(this.node)
-    const element = state?.element
-    if (!state || !element) return
+  protected attach(state: MotionHandle, element: Element): VoidFunction {
     const viewport = state.options.viewport
     this.prevViewport = viewport
-    this.remove?.()
-    this.remove = undefined
 
     const { once, ...viewOptions } = viewport || {}
-    this.remove = inView(
+    return inView(
       element,
       (_, entry) => {
-        const props = state.options
         state.setActive('whileInView', true)
-        if (props.onViewportEnter) {
-          frame.postRender(() => props.onViewportEnter!(entry))
-        }
+        schedulePostRender(state.options.onViewportEnter, entry)
         if (!once) {
           return () => {
             state.setActive('whileInView', false)
-            const cb = state.options.onViewportLeave
-            if (cb) frame.postRender(() => cb(entry))
+            schedulePostRender(state.options.onViewportLeave, entry)
           }
         }
       },
       viewOptions,
     )
-  }
-
-  mount(): void {
-    this.start()
   }
 
   update(): void {
@@ -85,11 +72,14 @@ export class InViewFeature extends Feature<Element> {
     const viewportChanged = observerOptionNames.some(
       (name) => state.options.viewport?.[name] !== this.prevViewport?.[name],
     )
-    if (viewportChanged) this.start()
+    if (viewportChanged) {
+      this.unmount()
+      this.mount()
+    }
   }
+}
 
-  unmount(): void {
-    this.remove?.()
-    this.remove = undefined
-  }
+export const inViewFeatureDefinition: FeatureDefinition = {
+  isEnabled: isInViewEnabled,
+  Feature: InViewFeature,
 }

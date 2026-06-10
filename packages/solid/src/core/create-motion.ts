@@ -1,5 +1,5 @@
 import type { MotionValue, ResolvedValues, VisualElement } from 'motion-dom'
-import { createComputed, createEffect, onCleanup, onMount, splitProps, untrack } from 'solid-js'
+import { createEffect, createMemo, onCleanup, onMount, splitProps, untrack } from 'solid-js'
 
 import { injectAnimatePresence } from '@/components/animate-presence/presence'
 import type { PresenceContext } from '@/components/animate-presence/presence'
@@ -79,6 +79,14 @@ export interface MotionHandle {
   updateFeatures(): void
   initVisualElement(renderer: VisualElementRenderer): void
   ensureVisualElement(): VisualElement<Element> | undefined
+  /**
+   * Tracked read of the option-update memo. Computations deriving output
+   * from handle/VE state (the attrs builder) must read this — it forces a
+   * pending option swap + VE render to settle first. Nothing else
+   * guarantees that order: sibling observers of the same signals re-run in
+   * unstable order (Solid swap-removes observers on unsubscribe).
+   */
+  trackOptionsUpdate(): void
 
   // ---- Extension slots (writable) -----------------------------------------
   // getSnapshot/didUpdate are the Solid analogue of React's
@@ -239,6 +247,15 @@ function createMotionHandle(
     type,
   })
 
+  // Every VE created for this handle must land in the reverse lookup —
+  // feature classes only receive the VE and reach the handle through it.
+  const trackVisualElement = (
+    visualElement: VisualElement<Element> | undefined,
+  ): VisualElement<Element> | undefined => {
+    if (visualElement) visualElementHandles.set(visualElement, handle)
+    return visualElement
+  }
+
   const initVisualElement = (r: VisualElementRenderer) => {
     // Late init (a LazyMotion bundle resolving after mount): style
     // MotionValues may have moved while the element rendered statically, so
@@ -250,14 +267,11 @@ function createMotionHandle(
       Object.assign(latestValues, resolveLateStyleMotionValues(options, getContext()))
     }
     visualLifecycle.init(r)
-    const visualElement = visualLifecycle.get()
-    if (visualElement) visualElementHandles.set(visualElement, handle)
+    trackVisualElement(visualLifecycle.get())
   }
 
   const ensureVisualElement = (): VisualElement<Element> | undefined => {
-    const visualElement = visualLifecycle.ensure()
-    if (visualElement) visualElementHandles.set(visualElement, handle)
-    return visualElement
+    return trackVisualElement(visualLifecycle.ensure())
   }
 
   const setActive = (name: StateType, isActive: boolean): Promise<void> => {
@@ -303,7 +317,9 @@ function createMotionHandle(
     }
     return presenceRegistration
   }
+  // Idempotent — a handle registers with AnimatePresence at most once.
   const registerWithPresence = (el: HTMLElement | SVGElement) => {
+    if (presenceRegistration?.isRegistered()) return
     getPresenceRegistration()?.register(el)
   }
 
@@ -331,7 +347,7 @@ function createMotionHandle(
       })
     })
 
-    if (!presenceRegistration?.isRegistered()) registerWithPresence(el)
+    registerWithPresence(el)
   }
 
   const detach = () => {
@@ -351,13 +367,26 @@ function createMotionHandle(
 
   const setElement = (el: HTMLElement | SVGElement | null) => {
     element = el
-    if (el && !presenceRegistration?.isRegistered()) registerWithPresence(el)
+    if (el) registerWithPresence(el)
   }
 
+  // The option-update pipeline is split across two reactive primitives —
+  // the Solid analogue of the React lifecycle pair framer's MeasureLayout
+  // rides on:
+  //  - optionsUpdateMemo, pure phase: snapshot the OLD options
+  //    (getSnapshotBeforeUpdate), swap in the new ones, re-render the VE. A
+  //    memo so the attrs builder can read it (trackOptionsUpdate) and is
+  //    guaranteed to run after the swap.
+  //  - createEffect, after the flush: per-feature update() + didUpdate
+  //    (componentDidUpdate).
+  // One shared first-run flag, cleared by the effect: both skip initial
+  // work (attach() owns mounting), including option changes landing before
+  // the first effect run.
   let isFirstRun = true
-  createComputed(() => {
+  let optionsUpdateVersion = 0
+  const optionsUpdateMemo = createMemo(() => {
     const next = getOpts()
-    if (isFirstRun) return
+    if (isFirstRun) return optionsUpdateVersion
     untrack(() => {
       handle.getSnapshot(options, undefined)
       options = next
@@ -365,6 +394,7 @@ function createMotionHandle(
       visualLifecycle.render()
       if (next.motionConfig?.isStatic) replayStaticTree()
     })
+    return ++optionsUpdateVersion
   })
 
   createEffect(() => {
@@ -389,7 +419,7 @@ function createMotionHandle(
   createEffect(() => {
     if (!motionMachinery()) return
     untrack(() => {
-      if (element && !presenceRegistration?.isRegistered()) registerWithPresence(element)
+      if (element) registerWithPresence(element)
     })
   })
 
@@ -483,6 +513,9 @@ function createMotionHandle(
     updateFeatures,
     initVisualElement,
     ensureVisualElement,
+    trackOptionsUpdate: () => {
+      optionsUpdateMemo()
+    },
     _staticReplayHook: replayStaticTree,
   }
 
@@ -544,6 +577,12 @@ export function createMotion(props: MotionProps, options: CreateMotionOptions = 
 
   const attrs: MotionStyleRecord = {}
 
+  // Prop pipeline: user props → cleanStylePropForMotionDom (kebab-case
+  // userland style → camelCase loose record) → resolveMotionProps (merge
+  // layout-group/presence/config context) → ResolvedOptions, held as
+  // handle.options. The VE boundary applies resolveMotionDomProps on top
+  // (visual-element-lifecycle.ts), stripping the two keys whose Solid shapes
+  // diverge from motion-dom's (dragConstraints accessors, viewport).
   function getProps() {
     const rawProps = {
       ...propsWithoutChildren,
@@ -553,7 +592,11 @@ export function createMotion(props: MotionProps, options: CreateMotionOptions = 
     return resolveMotionProps(
       {
         ...rawProps,
-        style: cleanStylePropForMotionDom(rawProps.style, rawProps),
+        style: cleanStylePropForMotionDom(
+          rawProps.style,
+          rawProps,
+          rawProps.custom ?? presenceContext.custom,
+        ),
       },
       {
         layoutGroup,
@@ -574,17 +617,6 @@ export function createMotion(props: MotionProps, options: CreateMotionOptions = 
     type: options.type,
   })
   provideMotion(state)
-  // Keep every prop getter hot. Solid's mergeProps wraps function spread
-  // sources in createMemo, so the component's `{...motionAttrs(props)}` is a
-  // memoized evaluation; without a live subscriber to the prop getters, that
-  // memo's dependency set can drop the style getter after a flush in which
-  // it evaluates twice — the spread then re-applies stale attrs until the
-  // VE's next frame render. Re-reading the merged props each flush prevents
-  // the drop (pinned by the style-prop tests; a style-only read suffices for
-  // those, but transformTemplate/drag inputs flow through the same getters).
-  createEffect(() => {
-    getMotionProps()
-  })
   createLazyMotionFeatureWatcher(state, lazyMotionContext)
 
   function getAttrs() {
@@ -592,6 +624,10 @@ export function createMotion(props: MotionProps, options: CreateMotionOptions = 
     // the attrs so style MotionValues register live subscriptions — the
     // Solid analogue of motion/react re-rendering once lazy features resolve.
     motionMachinery()
+    // Tracked read: forces a pending option swap + VE update to settle
+    // before this build (see MotionHandle.trackOptionsUpdate). Pinned by the
+    // style-prop-update-ordering tests.
+    state.trackOptionsUpdate()
     return buildMotionAttrs({
       attrs,
       motionProps: getProps(),

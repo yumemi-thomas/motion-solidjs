@@ -1,37 +1,14 @@
 import { createSignal, onCleanup } from 'solid-js'
-import type { Accessor, Setter } from 'solid-js'
-import type { AnimationScope } from 'motion-dom'
 // `motion/mini` is the WAAPI-only DOM bundle — importing from here keeps
 // the JS animation engine / spring / keyframes-resolver out of consumer
 // bundles that only need CSS-animatable properties.
 import { animate as animateMini } from 'motion/mini'
+import { createAnimationScope } from '@/primitives/animation-scope'
+import type { Scope as AnimationScopeHandle } from '@/primitives/animation-scope'
 
-type Scope<T extends Element> = Accessor<T | null> &
-  AnimationScope<T | null> & {
-    animations: MiniAnimationPlaybackControls[]
-    set: Setter<T | null>
-  }
+type Scope<T extends Element> = AnimationScopeHandle<T, MiniAnimationPlaybackControls>
 
 type MiniAnimationPlaybackControls = ReturnType<typeof animateMini>
-
-function createScope<T extends Element>(
-  element: Accessor<T | null>,
-  setElement: Setter<T | null>,
-): Scope<T> {
-  const animations: MiniAnimationPlaybackControls[] = []
-  const scope = Object.assign(element, {
-    animations,
-    current: null,
-    set: setElement,
-  })
-
-  Object.defineProperty(scope, 'current', {
-    get: () => element(),
-    set: (value: T | null) => setElement(() => value),
-  })
-
-  return scope
-}
 
 type AnimationOptions = Parameters<typeof animateMini>[2]
 type AnimationKeyframes = Parameters<typeof animateMini>[1]
@@ -79,7 +56,7 @@ export function createAnimateMini<T extends Element = Element>(): [
   ) => MiniAnimationPlaybackControls,
 ] {
   const [element, setElement] = createSignal<T | null>(null)
-  const scope = createScope(element, setElement)
+  const scope = createAnimationScope<T, MiniAnimationPlaybackControls>(element, setElement)
 
   // motion/mini doesn't expose a `createScopedWaapiAnimate` factory, so
   // resolve string selectors against the scope element manually before

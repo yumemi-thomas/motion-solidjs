@@ -4,7 +4,7 @@ import type { ResolvedValues } from 'motion-dom'
 import type { PresenceContext } from '@/components/animate-presence/presence'
 import type { MotionStateContext, Options, VariantType } from '@/types'
 import type { ResolvedOptions } from './motion-dom-props'
-import { resolveVariant } from './resolve-variant'
+import { resolveDefinitionTarget } from './resolve-variant'
 
 export type MotionOptionsWithPresence = ResolvedOptions & {
   presenceContext?: PresenceContext
@@ -39,10 +39,8 @@ function resolveInitialVariant(
   custom?: Options['custom'],
   takeLast = false,
 ): VariantType | undefined {
-  const resolved = resolveVariant(definition, variants, custom)
-  if (!resolved) return undefined
-  const { transition, transitionEnd, ...target } = resolved
-  const merged: Record<string, unknown> = { ...target, ...transitionEnd }
+  const merged = resolveDefinitionTarget(definition, variants, custom)
+  if (!merged) return undefined
   // Collapse keyframe arrays to a single initial value — the first keyframe
   // normally, or the last when the initial animation is blocked (initial=false
   // / suppressed by Presence) so the element paints at the end-of-animation
@@ -53,7 +51,15 @@ function resolveInitialVariant(
       merged[key] = value[takeLast ? value.length - 1 : 0]
     }
   }
-  return merged as VariantType
+  return merged
+}
+
+/**
+ * The `custom` value variant functions resolve against: the component's own
+ * prop, falling back to AnimatePresence's.
+ */
+function resolveDefinitionCustom(options: MotionOptionsWithPresence): unknown {
+  return options.custom ?? options.presenceContext?.custom
 }
 
 function resolveDefinitionValues(
@@ -69,7 +75,7 @@ function resolveDefinitionValues(
   const sources: Array<'initial' | 'animate'> = isInitialAnimationBlocked
     ? ['initial', 'animate']
     : ['initial']
-  const custom = options.custom ?? options.presenceContext?.custom
+  const custom = resolveDefinitionCustom(options)
   const resolved: ResolvedValues = {}
   for (const variant of sources) {
     const definition = options[variant] || context?.[variant]

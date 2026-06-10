@@ -1,12 +1,13 @@
 import { Feature } from 'motion-dom'
 import type { MotionNodeOptions } from 'motion-dom'
 import type { DragControls } from '@/primitives/create-drag-controls'
+import type { FeatureDefinition } from '@/features/definitions'
 import { VisualElementDragControls } from '@/features/gestures/drag/visual-element-drag-controls'
 import { getMotionHandle, type MotionHandle } from '@/core/create-motion'
 
 const noVoid: () => void = () => {}
 
-export function isDragEnabled(options: MotionNodeOptions): boolean {
+function isDragEnabled(options: MotionNodeOptions): boolean {
   return Boolean(options.drag || options.dragControls)
 }
 
@@ -15,7 +16,7 @@ export function isDragEnabled(options: MotionNodeOptions): boolean {
  * subscription when the user swaps the instance (signal/state-driven).
  * Unmount cancels any in-flight pan session and tears down listeners.
  */
-export class DragGesture extends Feature<Element> {
+class DragGesture extends Feature<Element> {
   private controls?: VisualElementDragControls
   private currentDragControls?: DragControls
   private removeGroupControls: () => void = noVoid
@@ -57,4 +58,9 @@ export class DragGesture extends Feature<Element> {
     this.removeListeners()
     this.removeListeners = noVoid
   }
+}
+
+export const dragFeatureDefinition: FeatureDefinition = {
+  isEnabled: isDragEnabled,
+  Feature: DragGesture,
 }

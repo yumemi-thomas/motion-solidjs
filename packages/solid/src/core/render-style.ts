@@ -2,6 +2,7 @@ import {
   buildHTMLStyles,
   buildSVGAttrs,
   camelCaseAttributes,
+  camelToDash,
   isMotionValue,
   isSVGTag,
 } from 'motion-dom'
@@ -49,10 +50,9 @@ function createSVGRenderState(): SVGRenderState {
   }
 }
 
-export function camelToDash(str: string) {
-  return str.replace(/([A-Z])/g, (match) => `-${match.toLowerCase()}`)
-}
+export { camelToDash } from 'motion-dom'
 
+// motion-dom exports camelToDash but not the inverse.
 export function dashToCamel(str: string) {
   return str.replace(/-([a-z])/g, (_, letter: string) => letter.toUpperCase())
 }

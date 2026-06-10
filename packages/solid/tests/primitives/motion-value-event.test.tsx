@@ -2,7 +2,7 @@ import { cleanup, render } from '@solidjs/testing-library'
 import { motionValue } from 'motion-dom'
 import { onMount } from 'solid-js'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { createMotionValueEvent } from '@/primitives/values'
+import { createMotionValueEvent } from '@/primitives'
 
 afterEach(() => cleanup())
 

@@ -1,11 +1,12 @@
-import { cancelFrame, Feature, frame, frameData } from 'motion-dom'
+import { cancelFrame, frame, frameData } from 'motion-dom'
 import type { EventInfo } from 'motion-dom'
-import { frame as motionFrame } from 'motion-dom'
 import type { Point, TransformPoint } from 'motion-utils'
 import { millisecondsToSeconds, noop, pipe, secondsToMilliseconds } from 'motion-utils'
 
 import { addPointerEvent, extractEventInfo, isPrimaryPointer } from '@/events'
-import { getMotionHandle } from '@/core/create-motion'
+import type { MotionHandle } from '@/core/create-motion'
+import type { FeatureDefinition } from '@/features/definitions'
+import { ElementGestureFeature, schedulePostRender } from '@/features/gestures/utils'
 import { getContextWindow } from '@/utils'
 
 // ---------- Public types ----------
@@ -30,6 +31,8 @@ export interface PanProps {
 }
 
 // ---------- PanSession (low-level, used by drag) ----------
+// Port of framer-motion's gestures/pan/PanSession.ts (not exported by
+// motion-dom) — check drift when bumping the motion peer range.
 
 type PanHandler = (event: Event, info: PanInfo) => void
 
@@ -339,53 +342,30 @@ function getVelocity(history: TimestampedPoint[], timeDelta: number): Point {
 
 // ---------- Pan gesture wiring for `onPan*` JSX props ----------
 
-type PanEventHandler = (event: PointerEvent, info: PanInfo) => void
-
-// All onPan* callbacks are deferred to postRender in source order. Without
-// this, onPan ran synchronously while onPanStart was queued for postRender,
-// so the first onPan would land before its own onPanStart.
-function asyncHandler(handler?: PanEventHandler) {
-  return (event: PointerEvent, info: PanInfo) => {
-    if (handler) {
-      motionFrame.postRender(() => handler(event, info))
-    }
-  }
-}
-
 /**
  * Wire pan handlers (onPanStart, onPan, onPanEnd, onPanSessionStart) to the
  * element. Attaches a pointerdown listener on mount (the session decides
  * whether to honor it based on current opts); unmount ends any in-flight
  * session.
+ *
+ * All onPan* callbacks are deferred to postRender via `schedulePostRender`.
+ * Without this, onPan ran synchronously while onPanStart was queued for
+ * postRender, so the first onPan would land before its own onPanStart.
  */
-export class PanGesture extends Feature<Element> {
+class PanGesture extends ElementGestureFeature {
   private session?: PanSession
-  private removePointerDownListener?: () => void
 
-  mount(): void {
-    const state = getMotionHandle(this.node)
-    const element = state?.element
-    if (!state || !element) return
-
+  protected attach(state: MotionHandle, element: Element): VoidFunction {
     const createPanHandlers = () => ({
-      onSessionStart: asyncHandler((_, info) => {
-        const { onPanSessionStart } = state.options
-        onPanSessionStart && onPanSessionStart(_, info)
-      }),
-      onStart: asyncHandler((_, info) => {
-        const { onPanStart } = state.options
-        onPanStart && onPanStart(_, info)
-      }),
-      onMove: asyncHandler((event, info) => {
-        const { onPan } = state.options
-        onPan && onPan(event, info)
-      }),
+      onSessionStart: (event: PointerEvent, info: PanInfo) =>
+        schedulePostRender(state.options.onPanSessionStart, event, info),
+      onStart: (event: PointerEvent, info: PanInfo) =>
+        schedulePostRender(state.options.onPanStart, event, info),
+      onMove: (event: PointerEvent, info: PanInfo) =>
+        schedulePostRender(state.options.onPan, event, info),
       onEnd: (event: PointerEvent, info: PanInfo) => {
-        const { onPanEnd } = state.options
         this.session = undefined
-        if (onPanEnd) {
-          motionFrame.postRender(() => onPanEnd(event, info))
-        }
+        schedulePostRender(state.options.onPanEnd, event, info)
       },
     })
 
@@ -396,19 +376,22 @@ export class PanGesture extends Feature<Element> {
       })
     }
 
-    this.removePointerDownListener = addPointerEvent(element, 'pointerdown', onPointerDown)
-  }
-
-  unmount(): void {
-    this.removePointerDownListener?.()
-    this.removePointerDownListener = undefined
-    this.session?.end()
-    this.session = undefined
+    const removePointerDownListener = addPointerEvent(element, 'pointerdown', onPointerDown)
+    return () => {
+      removePointerDownListener()
+      this.session?.end()
+      this.session = undefined
+    }
   }
 }
 
 const panProps = ['onPan', 'onPanStart', 'onPanSessionStart', 'onPanEnd'] as const
 
-export function isPanEnabled(options: import('motion-dom').MotionNodeOptions): boolean {
+function isPanEnabled(options: import('motion-dom').MotionNodeOptions): boolean {
   return panProps.some((name) => Boolean(options[name]))
+}
+
+export const panFeatureDefinition: FeatureDefinition = {
+  isEnabled: isPanEnabled,
+  Feature: PanGesture,
 }

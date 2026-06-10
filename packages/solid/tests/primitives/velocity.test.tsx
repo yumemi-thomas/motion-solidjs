@@ -1,7 +1,7 @@
 import { cleanup, render } from '@solidjs/testing-library'
 import { motionValue } from 'motion-dom'
 import { afterEach, describe, expect, it } from 'vitest'
-import { createVelocity } from '@/primitives/values'
+import { createVelocity } from '@/primitives'
 
 afterEach(() => cleanup())
 

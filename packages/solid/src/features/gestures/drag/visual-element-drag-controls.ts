@@ -50,15 +50,9 @@ export interface DragControlOptions {
 type DragDirection = 'x' | 'y'
 type DragControlProps = Omit<MotionHandle['options'], keyof DragHandlers> & DragHandlers
 
-// ---------- Global drag gesture lock ----------
-//
-// Two module-level locks (horizontal + vertical) coordinate drag gestures
-// across the entire page. Each drag acquires the locks it cares about on
-// start; release happens in cancel(). The locks also feed motion-dom's
-// hover gesture via `isDragActive` so a hover that started during a drag
-// is suppressed (filter in `motion-dom/gestures/hover` falls back through
-// here transitively — we don't import isDragActive but the same lock is
-// shared via motion-dom).
+// The global drag gesture lock is motion-dom's `setDragLock`/`isDragging`
+// state — shared with its hover/press gating, so a hover that starts during
+// a drag is suppressed by the same lock the drag holds.
 
 /**
  * Resolve `dragConstraints` to its underlying value. In Solid, the React-ref

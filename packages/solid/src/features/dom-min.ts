@@ -1,4 +1,5 @@
 import { HTMLVisualElement, SVGVisualElement } from 'motion-dom'
+import type { VisualElementOptions } from 'motion-dom'
 import { AnimationFeature, isAnimationEnabled } from '@/features/animation'
 import type { FeatureDefinitions } from '@/features/definitions'
 import { isSVGElement } from '@/utils/is'
@@ -7,7 +8,10 @@ import type { MotionMachinery } from '@/motion/machinery'
 import { createPresenceRegistration } from '@/motion/presence-registration'
 import type { AsTag } from '@/types'
 
-export function createVisualElement(Component: AsTag, options: any) {
+export function createVisualElement(
+  Component: AsTag,
+  options: VisualElementOptions<unknown, unknown>,
+) {
   return isSVGElement(Component) ? new SVGVisualElement(options) : new HTMLVisualElement(options)
 }
 

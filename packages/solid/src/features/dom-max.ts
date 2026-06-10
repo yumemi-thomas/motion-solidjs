@@ -1,10 +1,6 @@
 import type { FeatureDefinitions } from '@/features/definitions'
-import {
-  domAnimation,
-  createVisualElement,
-  motionHandleMachinery,
-  type FeatureBundle,
-} from '@/features/dom-animation'
+import { domAnimation } from '@/features/dom-animation'
+import { createVisualElement, motionHandleMachinery, type FeatureBundle } from '@/features/dom-min'
 import { DragGesture, isDragEnabled } from '@/features/gestures/drag'
 import { PanGesture, isPanEnabled } from '@/features/gestures/pan'
 import { LayoutFeature, isLayoutEnabled } from '@/features/layout/layout'

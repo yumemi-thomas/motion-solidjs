@@ -2,6 +2,7 @@ import type { MotionProps } from '@/components/motion'
 import { domMax } from '@/features/dom-max'
 import { updateLazyFeatures } from '@/features/lazy-features'
 import { createVisualElement } from '@/features/dom-animation'
+import { installMotionMachinery } from '@/motion/machinery'
 import {
   type CreateMotionAttrsOptions,
   type CreateMotionAttrsReturn,
@@ -15,6 +16,7 @@ let featuresRegistered = false
 function ensureFeatures() {
   if (featuresRegistered) return
   featuresRegistered = true
+  if (domMax.machinery) installMotionMachinery(domMax.machinery)
   updateLazyFeatures(domMax.features ?? [])
 }
 

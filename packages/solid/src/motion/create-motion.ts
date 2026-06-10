@@ -8,7 +8,7 @@ import type { MotionProps } from '@/components/motion'
 import { createMotionConfig } from '@/components/motion-config/context'
 import type { StateType } from '@/features/animation'
 import type { BindingFactory, createVisualElement } from '@/features/dom-animation'
-import type { MotionStateContext, MotionStyleProps, Options } from '@/types'
+import type { MotionStateContext, Options } from '@/types'
 import { invariant, isSVGElement, warning } from '@/utils/is'
 import { resolveMotionProps } from '@/utils/resolve-motion-props'
 import {
@@ -17,23 +17,29 @@ import {
   createLazyMotionFeatureWatcher,
   type FeatureBindingController,
 } from './feature-binding'
-import { createPresenceRegistration, type PresenceRegistration } from './presence-registration'
+import type { PresenceRegistration, PresenceRegistrationLifecycle } from './presence-registration'
 import { requestRootProjectionUpdate } from './root-projection-update'
-import { createValueRegistry, type ValueRegistry } from './value-registry'
+import type { ValueRegistry } from './value-registry'
+import { inertValueRegistry, motionMachinery, type MotionMachinery } from './machinery'
 import { resolveMotionDomProps } from './motion-dom-props'
 import {
   createVisualElementLifecycle,
   type VisualElementRenderer,
 } from './visual-element-lifecycle'
-import { createStyleWriterLifecycle } from './style-writer-lifecycle'
-import { createVariantContext, resolveInitialValues } from './initial-values'
+import {
+  createVariantContext,
+  resolveInitialValues,
+  resolveLateStyleMotionValues,
+} from './initial-values'
 import { buildMotionAttrs, cleanStylePropForMotionDom } from './motion-attrs-style'
+import type { ResolvedOptions } from './motion-dom-props'
+import type { MotionStyleRecord } from './render-style'
 
 // ---------------------------------------------------------------------------
 // MotionHandle — the motion node owned by each `<motion.*>` JSX element.
 // ---------------------------------------------------------------------------
 
-type GetSnapshotHook = (options: Options, isPresent?: boolean) => void
+type GetSnapshotHook = (options: ResolvedOptions, isPresent?: boolean) => void
 type DidUpdateHook = () => void
 
 /**
@@ -43,7 +49,7 @@ export interface MotionHandle {
   // ---- Lifecycle state ----------------------------------------------------
   type: 'html' | 'svg'
   element: HTMLElement | SVGElement | null
-  options: Options & {
+  options: ResolvedOptions & {
     presenceContext?: PresenceContext
   }
   visualElement: VisualElement<Element> | undefined
@@ -100,7 +106,7 @@ export const mountedStates = new WeakMap<Element, MotionHandle>()
 // but never inserted.
 const MAX_CONNECTION_FRAMES = 60
 
-type HandleOptions = Options & {
+type HandleOptions = ResolvedOptions & {
   presenceContext?: PresenceContext
   features?: BindingFactory[]
 }
@@ -199,24 +205,42 @@ function createMotionHandle(
   const type: 'html' | 'svg' = config.type ?? (isSVGElement(options.as) ? 'svg' : 'html')
   const children = new Set<MotionHandle>()
   const getValueRegistry = (): ValueRegistry => {
-    if (!valueRegistry) valueRegistry = createValueRegistry()
+    if (!valueRegistry) {
+      const machinery = motionMachinery()
+      // Bare `m` before features load: behave as "no values registered",
+      // mirroring motion/react where nothing value-driven exists yet.
+      if (!machinery) return inertValueRegistry
+      valueRegistry = machinery.createValueRegistry()
+    }
     return valueRegistry
   }
-  const styleWriter = createStyleWriterLifecycle({
-    getElement: () => element,
-    getRegistry: getValueRegistry,
-    getVisualElement: () => visualLifecycle.get(),
-    type,
-  })
+  let styleWriter: ReturnType<MotionMachinery['createStyleWriterLifecycle']> | undefined
+  const getStyleWriter = () => {
+    if (!styleWriter) {
+      styleWriter = motionMachinery()?.createStyleWriterLifecycle({
+        getElement: () => element,
+        getRegistry: getValueRegistry,
+        getVisualElement: () => visualLifecycle.get(),
+        type,
+      })
+    }
+    return styleWriter
+  }
   const attachStyleWriter = (mv: MotionValue): void => {
-    styleWriter.attach(mv)
+    getStyleWriter()?.attach(mv)
   }
   const setStyleMotionValue = (key: string, mv: MotionValue): void => {
+    // Without machinery (no feature bundle yet) style MotionValues render
+    // their current value statically — motion/react parity. The tracked
+    // machinery read re-runs the attrs computation on install, which
+    // re-registers them live.
+    if (!motionMachinery()) return
     getValueRegistry().setExternal(key, mv)
     attachStyleWriter(mv)
     visualLifecycle.get()?.addValue(key, mv)
   }
   const setStyleStaticValue = (key: string, value: unknown): void => {
+    if (!motionMachinery()) return
     const mv = getValueRegistry().setStatic(key, value)
     attachStyleWriter(mv)
     visualLifecycle.get()?.addValue(key, mv)
@@ -248,6 +272,15 @@ function createMotionHandle(
   })
 
   const initVisualElement = (r: VisualElementRenderer) => {
+    // Late init (a LazyMotion bundle resolving after mount): style
+    // MotionValues may have moved while the element rendered statically, so
+    // catch their snapshot entries up before the VisualElement seeds from
+    // it — its first frame-scheduled render would otherwise paint
+    // creation-time values over the rebuilt attrs. Variant-resolved keys
+    // stay untouched: they're animation origins.
+    if (!visualLifecycle.get()) {
+      Object.assign(latestValues, resolveLateStyleMotionValues(options, getContext()))
+    }
     visualLifecycle.init(r)
   }
 
@@ -287,8 +320,17 @@ function createMotionHandle(
   let presenceRegistration: PresenceRegistration | undefined
   let hasAttached = false
 
+  const getPresenceRegistration = (): PresenceRegistration | undefined => {
+    if (!presenceRegistration) {
+      presenceRegistration = untrack(motionMachinery)?.createPresenceRegistration(
+        handle,
+        presenceLifecycle,
+      )
+    }
+    return presenceRegistration
+  }
   const registerWithPresence = (el: HTMLElement | SVGElement) => {
-    presenceRegistration?.register(el)
+    getPresenceRegistration()?.register(el)
   }
 
   const attach = (el: HTMLElement | SVGElement) => {
@@ -324,7 +366,7 @@ function createMotionHandle(
     connectionRaf = undefined
     connectedCallbacks.length = 0
     presenceRegistration?.unregister()
-    styleWriter.dispose()
+    styleWriter?.dispose()
     featureBindings?.dispose()
     valueRegistry?.dispose()
     visualLifecycle.unmount()
@@ -362,6 +404,16 @@ function createMotionHandle(
       updateFeatures()
       handle._animationUpdateHook?.()
       handle.didUpdate()
+    })
+  })
+
+  // Machinery can arrive after mount (async LazyMotion bundle): register
+  // with AnimatePresence then. Style MotionValues re-register live through
+  // the attrs rebuild (see createMotion's getAttrs).
+  createEffect(() => {
+    if (!motionMachinery()) return
+    untrack(() => {
+      if (element && !presenceRegistration?.isRegistered()) registerWithPresence(element)
     })
   })
 
@@ -462,9 +514,7 @@ function createMotionHandle(
     _staticReplayHook: replayStaticTree,
   }
 
-  parent?.children.add(handle)
-  featureBindings = createFeatureBindingController(handle, getOpts)
-  presenceRegistration = createPresenceRegistration(handle, {
+  const presenceLifecycle: PresenceRegistrationLifecycle = {
     attach,
     isAttached: () => hasAttached,
     getElement: () => element,
@@ -472,7 +522,10 @@ function createMotionHandle(
     setPresenceContainer(value) {
       presenceContainer = value
     },
-  })
+  }
+
+  parent?.children.add(handle)
+  featureBindings = createFeatureBindingController(handle, getOpts)
   return handle
 }
 
@@ -518,7 +571,7 @@ export function createMotion(props: MotionProps, options: CreateMotionOptions = 
     props.ignoreStrict ? warning(false, strictMessage) : invariant(false, strictMessage)
   }
 
-  const attrs: Record<string, MotionStyleProps[string]> = {}
+  const attrs: MotionStyleRecord = {}
 
   function getProps() {
     const rawProps = {
@@ -553,6 +606,10 @@ export function createMotion(props: MotionProps, options: CreateMotionOptions = 
   createLazyMotionFeatureWatcher(state, lazyMotionContext)
 
   function getAttrs() {
+    // Tracked read: when a LazyMotion bundle installs the machinery, rebuild
+    // the attrs so style MotionValues register live subscriptions — the
+    // Solid analogue of motion/react re-rendering once lazy features resolve.
+    motionMachinery()
     return buildMotionAttrs({
       attrs,
       motionProps: getProps(),

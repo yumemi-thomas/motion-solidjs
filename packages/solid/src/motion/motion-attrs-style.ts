@@ -166,14 +166,14 @@ export function buildMotionAttrs(options: {
   let styleProps: MotionStyleRecord
 
   if (isSVG) {
-    styleProps = { ...styleProp }
+    // SVG styleProps start from the raw style prop, which can hold
+    // MotionValues — resolve them to current values before building.
+    styleProps = resolveStyleMotionValues(styleProp)
   } else {
     const base: MotionStyleRecord = {}
     applyHTMLStyleValues(base, styleProp, options.motionProps, options.state)
     styleProps = { ...base, ...currentValues }
   }
-
-  styleProps = resolveStyleMotionValues(styleProps)
 
   if (isSVG) {
     // Keep raw user CSS (non-MotionValue, non-transform) in `style` rather than

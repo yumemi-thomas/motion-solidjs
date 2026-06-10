@@ -80,13 +80,11 @@ export interface MotionHandle {
   initVisualElement(renderer: VisualElementRenderer): void
   ensureVisualElement(): VisualElement<Element> | undefined
   /**
-   * Tracked read of the option-update memo. Any computation that derives
-   * output from handle/VE state (attrs builders) MUST read this: it creates
-   * the dependency edge that forces a pending option swap + VE
-   * update/render to settle first (Solid's glitch-free memo ordering).
-   * Sibling computations observing the same signals re-run in UNSTABLE order
-   * — Solid's cleanNode swap-removes observers, permuting the list every
-   * flush — so "the update ran first last flush" guarantees nothing.
+   * Tracked read of the option-update memo. Computations deriving output
+   * from handle/VE state (the attrs builder) must read this — it forces a
+   * pending option swap + VE render to settle first. Nothing else
+   * guarantees that order: sibling observers of the same signals re-run in
+   * unstable order (Solid swap-removes observers on unsubscribe).
    */
   trackOptionsUpdate(): void
 
@@ -319,9 +317,7 @@ function createMotionHandle(
     }
     return presenceRegistration
   }
-  // Idempotent: a handle registers with AnimatePresence at most once,
-  // whichever of attach / setElement / late-machinery-arrival gets there
-  // first.
+  // Idempotent — a handle registers with AnimatePresence at most once.
   const registerWithPresence = (el: HTMLElement | SVGElement) => {
     if (presenceRegistration?.isRegistered()) return
     getPresenceRegistration()?.register(el)
@@ -374,22 +370,18 @@ function createMotionHandle(
     if (el) registerWithPresence(el)
   }
 
-  // The option-update pipeline is deliberately split across two reactive
-  // primitives — the Solid analogue of the React lifecycle pair framer's
-  // MeasureLayout rides on:
-  //  - optionsUpdateMemo runs in the pure phase, before effects: snapshot
-  //    the OLD options (getSnapshotBeforeUpdate), then swap in the new ones
-  //    and re-render the VE. It is a MEMO, not a createComputed, so that
-  //    downstream computations (the attrs builder) can read it via
-  //    `trackOptionsUpdate` and get a guaranteed runs-after-the-swap
-  //    ordering — see the MotionHandle.trackOptionsUpdate doc.
-  //  - createEffect runs after: per-feature update() + didUpdate
+  // The option-update pipeline is split across two reactive primitives —
+  // the Solid analogue of the React lifecycle pair framer's MeasureLayout
+  // rides on:
+  //  - optionsUpdateMemo, pure phase: snapshot the OLD options
+  //    (getSnapshotBeforeUpdate), swap in the new ones, re-render the VE. A
+  //    memo so the attrs builder can read it (trackOptionsUpdate) and is
+  //    guaranteed to run after the swap.
+  //  - createEffect, after the flush: per-feature update() + didUpdate
   //    (componentDidUpdate).
-  // They share one first-run flag, cleared by the EFFECT's first run: both
-  // skip initial work (attach() owns mounting), and an option change landing
-  // in the window between setup and the first effect run is skipped too.
-  // Don't merge the two primitives or give them separate flags without
-  // re-deriving these timing rules.
+  // One shared first-run flag, cleared by the effect: both skip initial
+  // work (attach() owns mounting), including option changes landing before
+  // the first effect run.
   let isFirstRun = true
   let optionsUpdateVersion = 0
   const optionsUpdateMemo = createMemo(() => {
@@ -632,15 +624,9 @@ export function createMotion(props: MotionProps, options: CreateMotionOptions = 
     // the attrs so style MotionValues register live subscriptions — the
     // Solid analogue of motion/react re-rendering once lazy features resolve.
     motionMachinery()
-    // Tracked read: Solid's mergeProps wraps the component's
-    // `{...motionAttrs(props)}` spread in a createMemo, a SIBLING observer of
-    // the same prop signals as the handle's option-update memo — and sibling
-    // run order permutes every flush (cleanNode swap-removes observers). If
-    // the spread memo ran first it would build attrs from the stale VE
-    // latestValues and paint them over the VE's render. Reading the update
-    // memo makes the ordering topological instead: the option swap + VE
-    // update always settle before this build. Pinned by the style-prop tests
-    // (3+ consecutive style-prop changes fail without this).
+    // Tracked read: forces a pending option swap + VE update to settle
+    // before this build (see MotionHandle.trackOptionsUpdate). Pinned by the
+    // style-prop-update-ordering tests.
     state.trackOptionsUpdate()
     return buildMotionAttrs({
       attrs,

@@ -32,8 +32,7 @@ export interface PanProps {
 
 // ---------- PanSession (low-level, used by drag) ----------
 // Port of framer-motion's gestures/pan/PanSession.ts (not exported by
-// motion-dom). Check drift against the framer-motion source when bumping the
-// motion peer range.
+// motion-dom) — check drift when bumping the motion peer range.
 
 type PanHandler = (event: Event, info: PanInfo) => void
 

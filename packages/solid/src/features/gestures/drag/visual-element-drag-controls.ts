@@ -1,10 +1,7 @@
-// Port of framer-motion's gestures/drag/VisualElementDragControls.ts (the
-// class isn't exported by motion-dom — it's a React-binding-level module).
-// Kept line-comparable with upstream where possible, including upstream's own
-// quirks (the unused `_point` param on updateAxis, the bare `// TODO` in
-// resolveRefConstraints) — check drift against the framer-motion source when
-// bumping the motion peer range. Solid-specific additions: accessor-form
-// dragConstraints resolution and the layout-shift compensation loop
+// Port of framer-motion's gestures/drag/VisualElementDragControls.ts (not
+// exported by motion-dom), kept line-comparable with upstream, quirks
+// included — check drift when bumping the motion peer range. Solid-specific
+// additions: accessor-form dragConstraints and the layout-shift compensation
 // (drag/layout-compensation.ts).
 import { addDomEvent, addPointerEvent, extractEventInfo } from '@/events'
 import {

@@ -1,11 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import { resolveDefinitionTarget, targetDefinesKey } from '@/core/resolve-variant'
 
-// Pins the unified definition-ownership semantics shared by the
-// initial-paint path (resolveInitialValues) and the style-ownership filter
-// (cleanStylePropForMotionDom). Before unification the filter reasoned about
-// the RAW variant object, so the `transition` config key counted as an owned
-// style key and `transitionEnd` contents didn't.
+// Pins the definition-ownership semantics shared by the initial-paint path
+// (resolveInitialValues) and the style-ownership filter
+// (cleanStylePropForMotionDom via targetDefinesKey).
 
 describe('resolveDefinitionTarget', () => {
   it('merges transitionEnd keys over the target and strips the config props', () => {

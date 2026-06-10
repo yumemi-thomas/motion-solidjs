@@ -56,9 +56,7 @@ function resolveInitialVariant(
 
 /**
  * The `custom` value variant functions resolve against: the component's own
- * prop, falling back to AnimatePresence's. Every definition-resolution site
- * must use this rule (the style-ownership filter takes it as a parameter —
- * see `getProps` in create-motion.ts).
+ * prop, falling back to AnimatePresence's.
  */
 function resolveDefinitionCustom(options: MotionOptionsWithPresence): unknown {
   return options.custom ?? options.presenceContext?.custom

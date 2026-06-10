@@ -2,11 +2,9 @@ import type { AsTag } from '@/types'
 
 export const isSSR = typeof window === 'undefined'
 
-// Deliberately looser than motion-dom's isHTMLElement (`'offsetHeight' in el
-// && !('ownerSVGElement' in el)`): this discriminates "DOM node" from "plain
-// config object" at boundaries like dragConstraints, where an SVG element
-// ref must also pass — and motion-dom's check fails under jsdom (see the
-// note in create-motion-attrs.tsx). Don't "fix" it to match motion-dom.
+// Deliberately looser than motion-dom's isHTMLElement: discriminates "DOM
+// node" from "plain config object" (dragConstraints), must also accept SVG
+// element refs, and motion-dom's offsetHeight-based check fails under jsdom.
 export function isHTMLElement(value: any): value is HTMLElement {
   return typeof value === 'object' && value !== null && 'nodeType' in value
 }

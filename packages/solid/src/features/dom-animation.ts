@@ -13,9 +13,8 @@ import { pressFeatureDefinition } from '@/features/gestures/press'
 export { createVisualElement, domMin, motionHandleMachinery } from '@/features/dom-min'
 export type { FeatureBundle } from '@/features/dom-min'
 
-// Gesture entries live here, not in dom-min's import graph — class heritage
-// defeats tree-shaking, so each bundle module imports only the feature
-// modules it actually ships.
+// Kept out of dom-min's import graph: class heritage defeats tree-shaking
+// (see domMin's doc).
 const gestureDefinitions: FeatureDefinitions = {
   hover: hoverFeatureDefinition,
   tap: pressFeatureDefinition,

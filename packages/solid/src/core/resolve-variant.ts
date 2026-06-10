@@ -17,14 +17,10 @@ function valueIsDefined(value: unknown) {
 }
 
 /**
- * Resolve a definition to the VALUES it owns: target keys merged with
- * `transitionEnd` keys, with the `transition`/`transitionEnd` config props
- * themselves stripped. This is the one shape both the initial-paint path
- * (`resolveInitialValues`) and the style-ownership filter
- * (`cleanStylePropForMotionDom` via `targetDefinesKey`) reason about — keep
- * them on this resolver so they can't diverge: a style key inside
- * `transitionEnd` IS animation-owned, while a CSS `transition` style prop is
- * NOT, even though the raw variant object has a `transition` key.
+ * Resolve a definition to the values it owns: target keys merged with
+ * `transitionEnd` keys, the `transition`/`transitionEnd` config props
+ * stripped. The initial-paint path and the style-ownership filter both
+ * reason about this shape — keep them on this one resolver.
  */
 export function resolveDefinitionTarget(
   definition: Options['animate'] | undefined,

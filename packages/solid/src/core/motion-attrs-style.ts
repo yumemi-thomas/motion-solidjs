@@ -193,8 +193,7 @@ export function buildMotionAttrs(options: {
 export function cleanStylePropForMotionDom(
   style: MotionStyleProps | undefined,
   options: MotionProps,
-  // The presence-aware custom (resolveDefinitionCustom). Defaults to the
-  // component's own prop for callers without an AnimatePresence context.
+  // Presence-aware custom; defaults to the component's own prop.
   custom: unknown = options.custom,
 ): MotionStyleRecord | undefined {
   if (!style || typeof style !== 'object') return undefined

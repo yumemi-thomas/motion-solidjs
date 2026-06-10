@@ -4,21 +4,16 @@ import { createSignal } from 'solid-js'
 import { describe, expect, it } from 'vitest'
 import { motion } from '@/components'
 
-// Regression tests for the spread/option-update ordering hazard.
+// Regression tests for the spread/option-update ordering hazard: the
+// mergeProps-wrapped `{...motionAttrs(props)}` spread memo and the handle's
+// option-update memo observe the same prop signals as siblings, and sibling
+// run order permutes on every flush (Solid swap-removes observers on
+// unsubscribe). If the spread memo runs first it paints attrs built from
+// stale VE values. getAttrs reads the option-update memo
+// (`trackOptionsUpdate`) so the swap always settles first.
 //
-// Solid's mergeProps wraps the component's `{...motionAttrs(props)}` spread
-// in a createMemo. That memo and the handle's option-update memo observe the
-// same prop signals as SIBLINGS, and sibling run order permutes on every
-// flush (Solid's cleanNode swap-removes observers). Whenever the spread memo
-// happened to run first, it built attrs from the stale VE latestValues and
-// painted them over the VE's render. The fix makes the ordering topological:
-// getAttrs reads the option-update memo (`trackOptionsUpdate`), so the swap
-// always settles first.
-//
-// The permutation has a cycle longer than one flush — a single toggle passes
-// by luck, and the previous workaround (a keep-alive effect re-reading the
-// merged props) merely pushed the failure from the 2nd flush to the 3rd.
-// Hence: FOUR consecutive changes, asserting after each one.
+// The permutation cycle is longer than one flush, so a single toggle can
+// pass by luck — hence four consecutive changes, asserted after each.
 
 const nextMicrotask = () => Promise.resolve()
 

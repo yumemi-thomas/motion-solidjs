@@ -3,15 +3,12 @@ import { afterEach, describe, expect, it } from 'vitest'
 import { Motion } from '@/components'
 
 // Pins the connection gate in create-motion.ts (`onConnected` + rAF poll):
-// when a subtree is built off-document and inserted later (CSR route
-// transitions), the initial animation pass must wait for the
-// disconnected→connected transition — motion-dom's keyframe resolver can't
-// read baseline values from a disconnected element, so dispatching at mount
-// would leave style-read properties stuck at their initial value.
+// a subtree built off-document and inserted later (CSR route transitions)
+// must defer its initial animation pass until the element connects, and the
+// 60-frame leak guard flushes anyway when it never does.
 //
-// Waits are FRAME-counted, not wall-clock: the gate gives up (and flushes)
-// after 60 rAF frames, so frame-based waits stay on the right side of the
-// cap regardless of environment frame rate.
+// Waits are frame-counted, not wall-clock: the gate counts rAF frames, so
+// frame-based waits stay on the right side of the cap at any frame rate.
 
 const frames = (n: number) =>
   new Promise<void>((resolve) => {

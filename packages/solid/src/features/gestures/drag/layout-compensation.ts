@@ -15,18 +15,15 @@ export interface DragLayoutCompensatorDelegate {
 type DragBox = { left: number; top: number }
 
 /**
- * Solid-specific addition over the framer-motion port: while a drag is
- * active, watch the element's viewport box once per frame and subtract any
- * movement that did NOT come from the pointer (surrounding content
- * reflowing — e.g. Reorder list items swapping — shifts the element's layout
- * position, and since drag offsets are relative to the origin measured at
- * drag start, the element would otherwise jump away from the pointer).
+ * While a drag is active, watch the element's viewport box once per frame
+ * and subtract any movement that did NOT come from the pointer — surrounding
+ * content reflowing (e.g. Reorder items swapping) shifts the element's
+ * layout position, and drag offsets are relative to the origin measured at
+ * drag start, so the element would otherwise jump away from the pointer.
  *
- * Deliberately runs on raw `window.requestAnimationFrame`, outside
- * motion-dom's frameloop: moving it into `frame.read` would pin its ordering
- * relative to pointer-move processing (`frame.update`) and change behavior
- * in a timing-sensitive area. Frames where the pointer moved are skipped —
- * the move handler refreshes the box itself via `notePointerMove`.
+ * Runs on raw `window.requestAnimationFrame`, outside motion-dom's
+ * frameloop: `frame.read` would pin its ordering against pointer-move
+ * processing (`frame.update`) in a timing-sensitive area.
  */
 export class DragLayoutCompensator {
   private latestBox: DragBox | undefined

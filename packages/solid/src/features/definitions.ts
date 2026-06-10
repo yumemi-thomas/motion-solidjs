@@ -10,10 +10,8 @@ import { setProjectionInit } from '@/core/projection-init'
 export type FeatureDefinitions = Parameters<typeof setFeatureDefinitions>[0]
 
 /**
- * One registry entry — every feature module exports its own so the
- * `isEnabled` gate and Feature class stay co-located with the feature, and
- * bundle files only list entries. motion-dom doesn't export the interface,
- * so derive it from the record type.
+ * One registry entry. motion-dom doesn't export the interface, so derive it
+ * from the record type.
  */
 export type FeatureDefinition = NonNullable<FeatureDefinitions[keyof FeatureDefinitions]>
 

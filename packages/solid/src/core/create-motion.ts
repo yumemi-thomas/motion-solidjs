@@ -600,7 +600,11 @@ export function createMotion(props: MotionProps, options: CreateMotionOptions = 
     return resolveMotionProps(
       {
         ...rawProps,
-        style: cleanStylePropForMotionDom(rawProps.style, rawProps),
+        style: cleanStylePropForMotionDom(
+          rawProps.style,
+          rawProps,
+          rawProps.custom ?? presenceContext.custom,
+        ),
       },
       {
         layoutGroup,

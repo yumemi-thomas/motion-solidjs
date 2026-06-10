@@ -1,10 +1,10 @@
 import { isForcedMotionValue, isMotionValue } from 'motion-dom'
 
 import type { MotionProps } from '@/components/motion'
-import type { MotionStyleProps, Options } from '@/types'
+import type { MotionStyleProps } from '@/types'
 import type { MotionHandle } from './create-motion'
 import { resolveInitialValues } from './initial-values'
-import { resolveVariant } from './resolve-variant'
+import { targetDefinesKey } from './resolve-variant'
 import {
   buildSolidHTMLStyle,
   buildSolidSVGAttrs,
@@ -14,32 +14,6 @@ import {
   type MotionStyleRecord,
   type MotionStyleValue,
 } from './render-style'
-
-function valueIsDefined(value: unknown) {
-  return value !== undefined && value !== null
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return Boolean(value) && typeof value === 'object' && !Array.isArray(value)
-}
-
-/**
- * Whether an `initial`/`animate` target defines `key`. This resolves variant
- * *labels* (and label arrays) against `variants` — so a value controlled by
- * e.g. `animate="active"` is recognised as owned by the animation and a plain
- * `style` value for the same key isn't applied over it.
- */
-function targetDefinesKey(
-  target: Options['initial'],
-  key: string,
-  variants: Options['variants'],
-  custom: unknown,
-) {
-  if (!valueIsDefined(target) || typeof target === 'boolean') return false
-  if (isRecord(target)) return valueIsDefined(target[key])
-  const resolved = resolveVariant(target, variants, custom)
-  return Boolean(resolved && key in resolved && valueIsDefined(resolved[key]))
-}
 
 function getTagName(tag: MotionProps<any>['as']) {
   return typeof tag === 'string' ? tag : 'div'
@@ -219,6 +193,9 @@ export function buildMotionAttrs(options: {
 export function cleanStylePropForMotionDom(
   style: MotionStyleProps | undefined,
   options: MotionProps,
+  // The presence-aware custom (resolveDefinitionCustom). Defaults to the
+  // component's own prop for callers without an AnimatePresence context.
+  custom: unknown = options.custom,
 ): MotionStyleRecord | undefined {
   if (!style || typeof style !== 'object') return undefined
 
@@ -238,8 +215,8 @@ export function cleanStylePropForMotionDom(
       // owned by initial/animate so a style update can't fight the
       // animation (transforms are "forced" unconditionally upstream).
       !forcedByLayout &&
-      (targetDefinesKey(options.initial, motionKey, options.variants, options.custom) ||
-        targetDefinesKey(options.animate, motionKey, options.variants, options.custom))
+      (targetDefinesKey(options.initial, motionKey, options.variants, custom) ||
+        targetDefinesKey(options.animate, motionKey, options.variants, custom))
     ) {
       continue
     }

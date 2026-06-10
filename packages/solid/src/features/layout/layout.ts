@@ -1,11 +1,10 @@
 import { addScaleCorrector, Feature, frame, globalProjectionState } from 'motion-dom'
 import type { IProjectionNode, MotionNodeOptions } from 'motion-dom'
-import { getMotionHandle, type MotionHandle } from '@/motion/create-motion'
+import { getMotionHandle, type MotionHandle } from '@/core/create-motion'
 import { defaultScaleCorrector } from './config'
 import { isDefined } from '@/types'
 import type { Options } from '@/types'
 
-// Inlined from the former `@/utils/is-hidden` (sole consumer was this file).
 function isHidden(element: HTMLElement) {
   return (
     element.style.display === 'none' ||
@@ -102,9 +101,6 @@ function mountLayout(state: MotionHandle): () => void {
       return
     }
 
-    /**
-     * Skip snapshot capture until the mount has settled.
-     */
     if (!hasMountSettled) {
       return
     }

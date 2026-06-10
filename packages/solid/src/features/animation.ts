@@ -1,6 +1,6 @@
 import { createAnimationState, Feature, isAnimationControls } from 'motion-dom'
 import type { MotionNodeOptions } from 'motion-dom'
-import { getMotionHandle, type MotionHandle } from '@/motion/create-motion'
+import { getMotionHandle, type MotionHandle } from '@/core/create-motion'
 
 const STATE_TYPES = [
   'animate',

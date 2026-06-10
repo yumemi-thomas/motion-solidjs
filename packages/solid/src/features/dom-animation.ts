@@ -5,16 +5,10 @@ import {
   motionHandleMachinery,
   type FeatureBundle,
 } from '@/features/dom-min'
-import {
-  FocusGesture,
-  HoverGesture,
-  InViewFeature,
-  PressGesture,
-  isFocusEnabled,
-  isHoverEnabled,
-  isInViewEnabled,
-  isPressEnabled,
-} from '@/features/gestures/gestures'
+import { FocusGesture, isFocusEnabled } from '@/features/gestures/focus'
+import { HoverGesture, isHoverEnabled } from '@/features/gestures/hover'
+import { InViewFeature, isInViewEnabled } from '@/features/gestures/in-view'
+import { PressGesture, isPressEnabled } from '@/features/gestures/press'
 
 export { createVisualElement, domMin, motionHandleMachinery } from '@/features/dom-min'
 export type { FeatureBundle } from '@/features/dom-min'

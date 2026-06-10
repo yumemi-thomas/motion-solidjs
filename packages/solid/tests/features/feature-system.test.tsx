@@ -6,7 +6,7 @@ import { afterEach, describe, expect, it } from 'vitest'
 import { motion } from '@/components'
 import { domAnimation, domMin } from '@/features/dom-animation'
 import { domMax } from '@/features/dom-max'
-import { mountedStates } from '@/motion/create-motion'
+import { mountedStates } from '@/core/create-motion'
 import { pointerEnter, pointerLeave } from '#tests/features/gestures/drag-test-utils'
 
 afterEach(() => cleanup())

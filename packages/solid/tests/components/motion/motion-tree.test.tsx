@@ -1,7 +1,7 @@
 import { cleanup, render } from '@solidjs/testing-library'
 import { afterEach, describe, expect, it } from 'vitest'
 import { Motion } from '@/components'
-import { mountedStates } from '@/motion/create-motion'
+import { mountedStates } from '@/core/create-motion'
 
 afterEach(() => {
   cleanup()

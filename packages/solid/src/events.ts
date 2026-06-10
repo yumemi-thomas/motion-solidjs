@@ -1,19 +1,11 @@
 import type { Point } from 'motion-utils'
 
-// ---------------------------------------------------------------------------
-// Types
-// ---------------------------------------------------------------------------
-
 /** @public */
 export interface EventInfo {
   point: Point
 }
 
 export type EventListenerWithPointInfo = (e: PointerEvent, info: EventInfo) => void
-
-// ---------------------------------------------------------------------------
-// Primary-pointer gate
-// ---------------------------------------------------------------------------
 
 export function isPrimaryPointer(event: PointerEvent) {
   if (event.pointerType === 'mouse') {
@@ -31,10 +23,6 @@ export function isPrimaryPointer(event: PointerEvent) {
   }
 }
 
-// ---------------------------------------------------------------------------
-// Pointer event info extraction
-// ---------------------------------------------------------------------------
-
 export function extractEventInfo(
   event: PointerEvent,
   pointType: 'page' | 'client' = 'page',
@@ -50,10 +38,6 @@ export function extractEventInfo(
 function addPointerInfo(handler: EventListenerWithPointInfo): EventListener {
   return (event: PointerEvent) => isPrimaryPointer(event) && handler(event, extractEventInfo(event))
 }
-
-// ---------------------------------------------------------------------------
-// Listener registration
-// ---------------------------------------------------------------------------
 
 export function addDomEvent(
   target: EventTarget,

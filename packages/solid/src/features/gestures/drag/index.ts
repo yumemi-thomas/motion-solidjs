@@ -2,7 +2,7 @@ import { Feature } from 'motion-dom'
 import type { MotionNodeOptions } from 'motion-dom'
 import type { DragControls } from '@/primitives/create-drag-controls'
 import { VisualElementDragControls } from '@/features/gestures/drag/visual-element-drag-controls'
-import { getMotionHandle, type MotionHandle } from '@/motion/create-motion'
+import { getMotionHandle, type MotionHandle } from '@/core/create-motion'
 
 const noVoid: () => void = () => {}
 

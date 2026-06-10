@@ -7,8 +7,8 @@ import {
 } from 'motion-dom'
 import { getClosestProjectingNode } from '@/features/layout/utils'
 import { defaultScaleCorrector } from '@/features/layout/config'
-import type { MotionHandle } from '@/motion/create-motion'
-import { setRootProjectionUpdater } from '@/motion/root-projection-update'
+import type { MotionHandle } from '@/core/create-motion'
+import { setRootProjectionUpdater } from '@/core/root-projection-update'
 import { isHTMLElement, isSSR } from '@/utils/is'
 
 // Lets the core handle request a root update on a new layout/drag node without
@@ -73,7 +73,7 @@ export function createProjection(state: MotionHandle): void {
       layoutAnchor: options.layoutAnchor,
       crossfade: options.crossfade,
       // No-op: layout-exit completion is observed via the Presence
-      // registry now (runExit awaits setActive('exit', true)'s promise).
+      // registry (runExit awaits setActive('exit', true)'s promise).
       onExitComplete: () => {},
     })
   }

@@ -3,9 +3,9 @@ import type { VisualElementOptions } from 'motion-dom'
 import { AnimationFeature, isAnimationEnabled } from '@/features/animation'
 import type { FeatureDefinitions } from '@/features/definitions'
 import { isSVGElement } from '@/utils/is'
-import type { MotionHandle } from '@/motion/create-motion'
-import type { MotionMachinery } from '@/motion/machinery'
-import { createPresenceRegistration } from '@/motion/presence-registration'
+import type { MotionHandle } from '@/core/create-motion'
+import type { MotionMachinery } from '@/core/machinery'
+import { createPresenceRegistration } from '@/core/presence-registration'
 import type { AsTag } from '@/types'
 
 export function createVisualElement(

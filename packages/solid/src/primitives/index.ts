@@ -3,7 +3,7 @@
 // exported.
 
 // --- Engine primitives ---
-export * from '@/motion/create-motion'
+export * from '@/core/create-motion'
 export { useMotion } from './use-motion'
 export type { UseMotionOptions, UseMotionResult } from './use-motion'
 

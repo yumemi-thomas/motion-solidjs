@@ -4,9 +4,9 @@ import { isMotionValue, type MotionValue } from 'motion-dom'
 import type { FeatureBundle } from '@/features/dom-animation'
 import type { createVisualElement } from '@/features/dom-animation'
 import { installFeatureDefinitions } from '@/features/definitions'
-import { installMotionMachinery } from '@/motion/machinery'
-import { createMotionAttrs } from '@/motion/create-motion-attrs'
-import { useMotionValueChild } from '@/motion/use-motion-value-child'
+import { installMotionMachinery } from '@/core/machinery'
+import { createMotionAttrs } from '@/core/create-motion-attrs'
+import { useMotionValueChild } from '@/core/use-motion-value-child'
 import type { AsTag, ComponentProps, DefineComponent, MotionHTMLAttributes, Options } from '@/types'
 
 type MotionChild = JSX.Element | MotionValue<number> | MotionValue<string>

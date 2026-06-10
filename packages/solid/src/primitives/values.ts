@@ -41,9 +41,6 @@ function createAnimationFrame(callback: FrameCallback) {
  * want `createTransform` / `createComputed` / `createMotionTemplate` instead.
  */
 export function createCombinedMotionValue<T>(combineValues: () => T) {
-  /**
-   * Initialise the returned motion value. This remains the same between renders.
-   */
   const value = motionValue(combineValues())
 
   /**
@@ -54,10 +51,6 @@ export function createCombinedMotionValue<T>(combineValues: () => T) {
    */
   const updateValue = () => value.set(combineValues())
 
-  /**
-   * Subscribe to all motion values found within the template. Whenever any of them change,
-   * schedule an update.
-   */
   const scheduleUpdate = () => frame.preRender(updateValue, false, true)
   let subscriptions: VoidFunction[]
 

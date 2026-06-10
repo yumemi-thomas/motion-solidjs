@@ -2,12 +2,12 @@ import type { MotionProps } from '@/components/motion'
 import { domMax } from '@/features/dom-max'
 import { installFeatureDefinitions } from '@/features/definitions'
 import { createVisualElement } from '@/features/dom-animation'
-import { installMotionMachinery } from '@/motion/machinery'
+import { installMotionMachinery } from '@/core/machinery'
 import {
   type CreateMotionAttrsOptions,
   type CreateMotionAttrsReturn,
   createMotionAttrs,
-} from '@/motion/create-motion-attrs'
+} from '@/core/create-motion-attrs'
 
 // Eagerly register the max feature bundle so consumers can use useMotion
 // stand-alone (without first importing `motion.X`, which registers them as

@@ -36,7 +36,7 @@ import {
   setDragLock,
 } from 'motion-dom'
 import { invariant } from '@/utils/is'
-import type { MotionHandle } from '@/motion/create-motion'
+import type { MotionHandle } from '@/core/create-motion'
 import type { MotionProps } from '@/components'
 import type { Axis, BoundingBox, Point } from 'motion-utils'
 

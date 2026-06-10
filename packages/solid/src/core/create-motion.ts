@@ -33,10 +33,6 @@ import { buildMotionAttrs, cleanStylePropForMotionDom } from './motion-attrs-sty
 import type { ResolvedOptions } from './motion-dom-props'
 import type { MotionStyleRecord } from './render-style'
 
-// ---------------------------------------------------------------------------
-// MotionHandle — the motion node owned by each `<motion.*>` JSX element.
-// ---------------------------------------------------------------------------
-
 type GetSnapshotHook = (options: ResolvedOptions, isPresent?: boolean) => void
 type DidUpdateHook = () => void
 
@@ -579,16 +575,13 @@ export function createMotion(props: MotionProps, options: CreateMotionOptions = 
   })
   provideMotion(state)
   // Keep every prop getter hot. Solid's mergeProps wraps function spread
-  // sources in createMemo (solid dist/dev.js, mergeProps), so the component's
-  // `{...motionAttrs(props)}` is a memoized evaluation; without another
-  // live subscriber to the prop getters, that memo's dependency set has been
-  // observed to drop the style getter after a flush in which it evaluates
-  // twice — the spread then re-applies stale attrs until the VE's next frame
-  // render. Re-reading the merged props each flush prevents the drop
-  // (empirically: 4 style-prop tests fail without this; a style-only read
-  // also passes, but the full read covers transformTemplate/drag inputs that
-  // flow through the same getters). The pre-Feature architecture got this
-  // incidentally from per-feature getOpts effects.
+  // sources in createMemo, so the component's `{...motionAttrs(props)}` is a
+  // memoized evaluation; without a live subscriber to the prop getters, that
+  // memo's dependency set can drop the style getter after a flush in which
+  // it evaluates twice — the spread then re-applies stale attrs until the
+  // VE's next frame render. Re-reading the merged props each flush prevents
+  // the drop (pinned by the style-prop tests; a style-only read suffices for
+  // those, but transformTemplate/drag inputs flow through the same getters).
   createEffect(() => {
     getMotionProps()
   })

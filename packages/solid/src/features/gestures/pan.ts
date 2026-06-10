@@ -5,7 +5,7 @@ import type { Point, TransformPoint } from 'motion-utils'
 import { millisecondsToSeconds, noop, pipe, secondsToMilliseconds } from 'motion-utils'
 
 import { addPointerEvent, extractEventInfo, isPrimaryPointer } from '@/events'
-import { getMotionHandle } from '@/motion/create-motion'
+import { getMotionHandle } from '@/core/create-motion'
 import { getContextWindow } from '@/utils'
 
 // ---------- Public types ----------

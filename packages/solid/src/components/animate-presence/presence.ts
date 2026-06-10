@@ -9,11 +9,6 @@ import { createContext } from '@/utils'
  * to exit a subtree root, Presence walks its registry, collects every
  * descendant's runExit, fires them in parallel, and resolves transition-
  * group's `done` when the combined Promise.all settles.
- *
- * This replaces the old global `mountedStates` WeakMap + `data-ap` DOM
- * attribute scheme: each Presence now owns its scope locally, so there's
- * no global lookup, no DOM query, and nothing to clean up across page
- * navigations.
  */
 export interface PresenceContext {
   initial?: boolean

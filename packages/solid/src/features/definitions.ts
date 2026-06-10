@@ -1,7 +1,7 @@
 import { getFeatureDefinitions, setFeatureDefinitions } from 'motion-dom'
 
-import type { MotionHandle } from '@/motion/create-motion'
-import { setProjectionInit } from '@/motion/projection-init'
+import type { MotionHandle } from '@/core/create-motion'
+import { setProjectionInit } from '@/core/projection-init'
 
 /**
  * The registry shape `setFeatureDefinitions` accepts. motion-dom declares

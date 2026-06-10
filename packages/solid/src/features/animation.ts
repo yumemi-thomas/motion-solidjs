@@ -1,6 +1,7 @@
 import { createAnimationState, Feature, isAnimationControls } from 'motion-dom'
 import type { MotionNodeOptions } from 'motion-dom'
 import { getMotionHandle, type MotionHandle } from '@/core/create-motion'
+import type { FeatureDefinition } from '@/features/definitions'
 
 const STATE_TYPES = [
   'animate',
@@ -14,7 +15,7 @@ const STATE_TYPES = [
 export type StateType = (typeof STATE_TYPES)[number]
 
 /** Mirrors framer's `featureProps.animation` isEnabled list. */
-export function isAnimationEnabled(options: MotionNodeOptions): boolean {
+function isAnimationEnabled(options: MotionNodeOptions): boolean {
   return Boolean(
     options.animate ||
     options.variants ||
@@ -56,7 +57,7 @@ function cascadeAnimateChangesToInheritedChildren(handle: MotionHandle): void {
  * driven by create-motion's central feature pass on option changes —
  * re-runs `animateChanges()` and cascades to inherited variant children.
  */
-export class AnimationFeature extends Feature<Element> {
+class AnimationFeature extends Feature<Element> {
   private unmountControls?: () => void
   private prevAnimate: unknown
   private initialPassDone = false
@@ -172,4 +173,9 @@ export class AnimationFeature extends Feature<Element> {
     this.unmountControls?.()
     this.unmountControls = undefined
   }
+}
+
+export const animationFeatureDefinition: FeatureDefinition = {
+  isEnabled: isAnimationEnabled,
+  Feature: AnimationFeature,
 }

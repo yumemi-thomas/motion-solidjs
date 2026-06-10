@@ -6,7 +6,7 @@ import { afterEach, describe, expect, it } from 'vitest'
 import { Motion, motion } from '@/components'
 import { mountedStates } from '@/core/create-motion'
 import { createTransform } from '@/primitives/create-transform'
-import { createMotionTemplate, createMotionValueEvent, createSpring } from '@/primitives/values'
+import { createMotionTemplate, createMotionValueEvent, createSpring } from '@/primitives'
 import { createInView } from '@/primitives/create-in-view'
 import { wait } from '../browser/helpers'
 

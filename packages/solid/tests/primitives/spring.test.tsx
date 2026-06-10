@@ -2,7 +2,7 @@ import { cleanup, render } from '@solidjs/testing-library'
 import { motionValue, type MotionValue } from 'motion-dom'
 import { createRoot, createSignal, onMount } from 'solid-js'
 import { afterEach, describe, expect, it } from 'vitest'
-import { createSpring } from '@/primitives/values'
+import { createSpring } from '@/primitives'
 import { delay } from '#tests/utils'
 
 afterEach(() => cleanup())

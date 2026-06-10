@@ -1,6 +1,7 @@
 import { addScaleCorrector, Feature, frame, globalProjectionState } from 'motion-dom'
 import type { IProjectionNode, MotionNodeOptions } from 'motion-dom'
 import { getMotionHandle, type MotionHandle } from '@/core/create-motion'
+import type { FeatureDefinition } from '@/features/definitions'
 import { defaultScaleCorrector } from './config'
 import { isDefined } from '@/types'
 import type { Options } from '@/types'
@@ -34,7 +35,7 @@ function willUpdateLayoutTree(root: IProjectionNode | undefined, exclude: IProje
   })
 }
 
-export function isLayoutEnabled(options: MotionNodeOptions): boolean {
+function isLayoutEnabled(options: MotionNodeOptions): boolean {
   // Drag also needs the measure-layout lifecycle (snapshots, didUpdate) —
   // upstream's drag feature definition carries MeasureLayout alongside the
   // gesture for the same reason.
@@ -51,7 +52,7 @@ export function isLayoutEnabled(options: MotionNodeOptions): boolean {
  * rides on). We rebind those slots here so a single handle can have layout
  * behaviour swapped at runtime.
  */
-export class LayoutFeature extends Feature<Element> {
+class LayoutFeature extends Feature<Element> {
   private cleanup?: () => void
 
   mount(): void {
@@ -203,4 +204,9 @@ function mountLayout(state: MotionHandle): () => void {
       didUpdate()
     }
   }
+}
+
+export const layoutFeatureDefinition: FeatureDefinition = {
+  isEnabled: isLayoutEnabled,
+  Feature: LayoutFeature,
 }

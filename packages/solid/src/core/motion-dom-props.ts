@@ -16,6 +16,13 @@ export type MotionDomOptions = ResolvedOptions & {
   presenceContext?: PresenceContext
 }
 
+/**
+ * Final stage of the prop pipeline (after `resolveMotionProps`): what the
+ * VisualElement receives. Strips the two keys whose Solid shapes diverge
+ * from motion-dom's React-flavored types — `dragConstraints` may be an
+ * accessor here (the drag feature resolves it itself) and `viewport` is the
+ * Solid-typed options object (the in-view feature reads it off the handle).
+ */
 export function resolveMotionDomProps(options: MotionDomOptions): MotionNodeOptions {
   const { dragConstraints, viewport, ...props } = options
   return props

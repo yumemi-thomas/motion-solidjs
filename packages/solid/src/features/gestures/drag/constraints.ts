@@ -1,3 +1,6 @@
+// Port of framer-motion's gestures/drag/utils/constraints.ts (pure math, not
+// exported by motion-dom). Check drift against the framer-motion source when
+// bumping the motion peer range.
 import type { ResolvedConstraints } from '@/features/gestures/drag/types'
 import type { DragElastic } from 'motion-dom'
 import { calcLength, mixNumber } from 'motion-dom'

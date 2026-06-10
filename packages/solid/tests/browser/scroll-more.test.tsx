@@ -1,7 +1,7 @@
 import { cleanup, render } from '@solidjs/testing-library'
 import { createScroll } from '@/primitives/create-scroll'
 import { createTransform } from '@/primitives/create-transform'
-import { createMotionValueEvent, createSpring } from '@/primitives/values'
+import { createMotionValueEvent, createSpring } from '@/primitives'
 import { afterEach, describe, expect, it } from 'vitest'
 import { motion } from '@/components'
 import { wait } from './helpers'

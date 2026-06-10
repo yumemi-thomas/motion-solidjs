@@ -9,17 +9,14 @@ export type { UseMotionOptions, UseMotionResult } from './use-motion'
 
 // --- MotionValue primitives ---
 export { motionValue as createMotionValue } from 'motion-dom'
-export {
-  createCombinedMotionValue,
-  createComputed,
-  createFollowValue,
-  createMotionTemplate,
-  createMotionValueEvent,
-  createMotionValueSignal,
-  createSpring,
-  createTime,
-  createVelocity,
-} from './values'
+export { createCombinedMotionValue } from './create-combined-motion-value'
+export { createComputed } from './create-computed'
+export { createFollowValue, createSpring } from './create-follow-value'
+export { createMotionTemplate } from './create-motion-template'
+export { createMotionValueEvent } from './create-motion-value-event'
+export { createMotionValueSignal } from './create-motion-value-signal'
+export { createTime } from './create-time'
+export { createVelocity } from './create-velocity'
 export { createTransform } from './create-transform'
 export { createWillChange } from './create-will-change'
 

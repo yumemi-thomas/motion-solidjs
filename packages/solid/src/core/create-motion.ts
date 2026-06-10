@@ -239,6 +239,15 @@ function createMotionHandle(
     type,
   })
 
+  // Every VE created for this handle must land in the reverse lookup —
+  // feature classes only receive the VE and reach the handle through it.
+  const trackVisualElement = (
+    visualElement: VisualElement<Element> | undefined,
+  ): VisualElement<Element> | undefined => {
+    if (visualElement) visualElementHandles.set(visualElement, handle)
+    return visualElement
+  }
+
   const initVisualElement = (r: VisualElementRenderer) => {
     // Late init (a LazyMotion bundle resolving after mount): style
     // MotionValues may have moved while the element rendered statically, so
@@ -250,14 +259,11 @@ function createMotionHandle(
       Object.assign(latestValues, resolveLateStyleMotionValues(options, getContext()))
     }
     visualLifecycle.init(r)
-    const visualElement = visualLifecycle.get()
-    if (visualElement) visualElementHandles.set(visualElement, handle)
+    trackVisualElement(visualLifecycle.get())
   }
 
   const ensureVisualElement = (): VisualElement<Element> | undefined => {
-    const visualElement = visualLifecycle.ensure()
-    if (visualElement) visualElementHandles.set(visualElement, handle)
-    return visualElement
+    return trackVisualElement(visualLifecycle.ensure())
   }
 
   const setActive = (name: StateType, isActive: boolean): Promise<void> => {
@@ -303,7 +309,11 @@ function createMotionHandle(
     }
     return presenceRegistration
   }
+  // Idempotent: a handle registers with AnimatePresence at most once,
+  // whichever of attach / setElement / late-machinery-arrival gets there
+  // first.
   const registerWithPresence = (el: HTMLElement | SVGElement) => {
+    if (presenceRegistration?.isRegistered()) return
     getPresenceRegistration()?.register(el)
   }
 
@@ -331,7 +341,7 @@ function createMotionHandle(
       })
     })
 
-    if (!presenceRegistration?.isRegistered()) registerWithPresence(el)
+    registerWithPresence(el)
   }
 
   const detach = () => {
@@ -351,9 +361,22 @@ function createMotionHandle(
 
   const setElement = (el: HTMLElement | SVGElement | null) => {
     element = el
-    if (el && !presenceRegistration?.isRegistered()) registerWithPresence(el)
+    if (el) registerWithPresence(el)
   }
 
+  // The option-update pipeline is deliberately split across two reactive
+  // primitives — the Solid analogue of the React lifecycle pair framer's
+  // MeasureLayout rides on:
+  //  - createComputed runs in the pure phase, before effects: snapshot the
+  //    OLD options (getSnapshotBeforeUpdate), then swap in the new ones and
+  //    re-render the VE.
+  //  - createEffect runs after: per-feature update() + didUpdate
+  //    (componentDidUpdate).
+  // They share one first-run flag, cleared by the EFFECT's first run: both
+  // skip initial work (attach() owns mounting), and an option change landing
+  // in the window between setup and the first effect run is skipped too.
+  // Don't merge the two primitives or give them separate flags without
+  // re-deriving these timing rules.
   let isFirstRun = true
   createComputed(() => {
     const next = getOpts()
@@ -389,7 +412,7 @@ function createMotionHandle(
   createEffect(() => {
     if (!motionMachinery()) return
     untrack(() => {
-      if (element && !presenceRegistration?.isRegistered()) registerWithPresence(element)
+      if (element) registerWithPresence(element)
     })
   })
 
@@ -544,6 +567,12 @@ export function createMotion(props: MotionProps, options: CreateMotionOptions = 
 
   const attrs: MotionStyleRecord = {}
 
+  // Prop pipeline: user props → cleanStylePropForMotionDom (kebab-case
+  // userland style → camelCase loose record) → resolveMotionProps (merge
+  // layout-group/presence/config context) → ResolvedOptions, held as
+  // handle.options. The VE boundary applies resolveMotionDomProps on top
+  // (visual-element-lifecycle.ts), stripping the two keys whose Solid shapes
+  // diverge from motion-dom's (dragConstraints accessors, viewport).
   function getProps() {
     const rawProps = {
       ...propsWithoutChildren,

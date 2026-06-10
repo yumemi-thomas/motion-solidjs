@@ -1,8 +1,10 @@
-import { Feature, frame, press } from 'motion-dom'
+import { press } from 'motion-dom'
 import type { EventInfo, MotionNodeOptions, VariantLabels } from 'motion-dom'
 
 import { extractEventInfo } from '@/events'
-import { getMotionHandle } from '@/core/create-motion'
+import type { FeatureDefinition } from '@/features/definitions'
+import { ElementGestureFeature, schedulePostRender } from '@/features/gestures/utils'
+import type { MotionHandle } from '@/core/create-motion'
 import type { VariantType } from '@/types'
 
 type TapEvent = (event: PointerEvent, info: EventInfo) => void
@@ -25,7 +27,7 @@ export interface PressProps {
 /** Mirrors framer's `featureProps.tap` isEnabled list. */
 const pressProps = ['whileTap', 'onTap', 'onTapStart', 'onTapCancel'] as const
 
-export function isPressEnabled(options: MotionNodeOptions): boolean {
+function isPressEnabled(options: MotionNodeOptions): boolean {
   return pressProps.some((name) => Boolean(options[name]))
 }
 
@@ -33,31 +35,22 @@ export function isPressEnabled(options: MotionNodeOptions): boolean {
  * Press (tap) gesture: listeners register once on mount and read the
  * handle's current options in their callbacks (framer parity).
  */
-export class PressGesture extends Feature<Element> {
-  private remove?: VoidFunction
-
-  mount(): void {
-    const state = getMotionHandle(this.node)
-    const element = state?.element
-    if (!state || !element) return
+class PressGesture extends ElementGestureFeature {
+  protected attach(state: MotionHandle, element: Element): VoidFunction {
     // Disabled form controls never fire press (matches motion/react's
     // PressGesture, which bails when the element is a disabled <button>).
     const isDisabled = () => element instanceof HTMLButtonElement && element.disabled
-    this.remove = press(
+    return press(
       [element],
       (_el, startEvent) => {
         if (isDisabled()) return
-        const props = state.options
         state.setActive('whileTap', true)
-        if (props.onTapStart) {
-          frame.postRender(() => props.onTapStart!(startEvent, extractEventInfo(startEvent)))
-        }
+        schedulePostRender(state.options.onTapStart, startEvent, extractEventInfo(startEvent))
         return (endEvent, { success }) => {
           if (isDisabled()) return
           state.setActive('whileTap', false)
-          const callbackName = success ? 'onTap' : 'onTapCancel'
-          const cb = state.options[callbackName]
-          if (cb) frame.postRender(() => cb(endEvent, extractEventInfo(endEvent)))
+          const cb = state.options[success ? 'onTap' : 'onTapCancel']
+          schedulePostRender(cb, endEvent, extractEventInfo(endEvent))
         }
       },
       {
@@ -66,9 +59,9 @@ export class PressGesture extends Feature<Element> {
       },
     )
   }
+}
 
-  unmount(): void {
-    this.remove?.()
-    this.remove = undefined
-  }
+export const pressFeatureDefinition: FeatureDefinition = {
+  isEnabled: isPressEnabled,
+  Feature: PressGesture,
 }

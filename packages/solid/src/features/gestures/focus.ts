@@ -1,8 +1,9 @@
-import { Feature } from 'motion-dom'
 import type { MotionNodeOptions, VariantLabels } from 'motion-dom'
 
 import { addDomEvent } from '@/events'
-import { getMotionHandle } from '@/core/create-motion'
+import type { FeatureDefinition } from '@/features/definitions'
+import { ElementGestureFeature } from '@/features/gestures/utils'
+import type { MotionHandle } from '@/core/create-motion'
 import type { VariantType } from '@/types'
 
 export type FocusProps = {
@@ -14,20 +15,15 @@ export type FocusProps = {
 /** Mirrors framer's `featureProps.focus` isEnabled list. */
 const focusProps = ['whileFocus'] as const
 
-export function isFocusEnabled(options: MotionNodeOptions): boolean {
+function isFocusEnabled(options: MotionNodeOptions): boolean {
   return focusProps.some((name) => Boolean(options[name]))
 }
 
 /** Focus gesture: drives `whileFocus` from focus-visible focus/blur. */
-export class FocusGesture extends Feature<Element> {
+class FocusGesture extends ElementGestureFeature {
   private isFocused = false
-  private remove?: VoidFunction
 
-  mount(): void {
-    const state = getMotionHandle(this.node)
-    const element = state?.element
-    if (!state || !element) return
-
+  protected attach(state: MotionHandle, element: Element): VoidFunction {
     // matches(':focus-visible') throws in browsers without focus-visible
     // support; treat that as "focused" so whileFocus still fires.
     const onFocus = () => {
@@ -50,14 +46,14 @@ export class FocusGesture extends Feature<Element> {
 
     const removeFocus = addDomEvent(element, 'focus', onFocus)
     const removeBlur = addDomEvent(element, 'blur', onBlur)
-    this.remove = () => {
+    return () => {
       removeFocus()
       removeBlur()
     }
   }
+}
 
-  unmount(): void {
-    this.remove?.()
-    this.remove = undefined
-  }
+export const focusFeatureDefinition: FeatureDefinition = {
+  isEnabled: isFocusEnabled,
+  Feature: FocusGesture,
 }

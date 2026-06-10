@@ -2,8 +2,8 @@ import type { MotionValue, TransformOptions } from 'motion-dom'
 import { motionValue, transform } from 'motion-dom'
 import { createEffect } from 'solid-js'
 import { type MaybeAccessor, isAccessor, resolveAccessor } from '@/types'
-import { createCombinedMotionValue } from '@/primitives/values'
-import { createComputed } from './values'
+import { createCombinedMotionValue } from '@/primitives/create-combined-motion-value'
+import { createComputed } from '@/primitives/create-computed'
 
 type InputRange = number[]
 type RangeDefinition = MaybeAccessor<InputRange>

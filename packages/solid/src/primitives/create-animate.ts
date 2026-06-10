@@ -1,32 +1,10 @@
 import { createSignal, onCleanup } from 'solid-js'
-import type { Accessor, Setter } from 'solid-js'
-import type { AnimationPlaybackControls, AnimationScope } from 'motion-dom'
+import type { AnimationPlaybackControls } from 'motion-dom'
 import { createScopedAnimate } from 'motion'
+import { createAnimationScope } from '@/primitives/animation-scope'
+import type { Scope as AnimationScopeHandle } from '@/primitives/animation-scope'
 
-type Scope<T extends Element> = Accessor<T | null> &
-  AnimationScope<T | null> & {
-    animations: AnimationPlaybackControls[]
-    set: Setter<T | null>
-  }
-
-function createScope<T extends Element>(
-  element: Accessor<T | null>,
-  setElement: Setter<T | null>,
-): Scope<T> {
-  const animations: AnimationPlaybackControls[] = []
-  const scope = Object.assign(element, {
-    animations,
-    current: null,
-    set: setElement,
-  })
-
-  Object.defineProperty(scope, 'current', {
-    get: () => element(),
-    set: (value: T | null) => setElement(() => value),
-  })
-
-  return scope
-}
+type Scope<T extends Element> = AnimationScopeHandle<T, AnimationPlaybackControls>
 
 /**
  * Returns a `[scope, animate]` tuple for imperatively animating elements
@@ -53,7 +31,7 @@ export function createAnimate<T extends Element = Element>(): [
   ReturnType<typeof createScopedAnimate>,
 ] {
   const [element, setElement] = createSignal<T | null>(null)
-  const scope = createScope(element, setElement)
+  const scope = createAnimationScope<T, AnimationPlaybackControls>(element, setElement)
 
   const animate = createScopedAnimate({ scope })
 

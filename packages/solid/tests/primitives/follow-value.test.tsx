@@ -2,7 +2,7 @@ import { cleanup, render } from '@solidjs/testing-library'
 import { motionValue, type MotionValue } from 'motion-dom'
 import { createSignal, onMount } from 'solid-js'
 import { afterEach, describe, expect, it } from 'vitest'
-import { createFollowValue, createMotionValueEvent } from '@/primitives/values'
+import { createFollowValue, createMotionValueEvent } from '@/primitives'
 import { delay } from '#tests/utils'
 
 // motion-dom's MotionValue exposes its internal `events` SubscriptionManager

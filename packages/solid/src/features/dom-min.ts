@@ -1,6 +1,6 @@
 import { HTMLVisualElement, SVGVisualElement } from 'motion-dom'
 import type { VisualElementOptions } from 'motion-dom'
-import { AnimationFeature, isAnimationEnabled } from '@/features/animation'
+import { animationFeatureDefinition } from '@/features/animation'
 import type { FeatureDefinitions } from '@/features/definitions'
 import { isSVGElement } from '@/utils/is'
 import type { MotionHandle } from '@/core/create-motion'
@@ -47,7 +47,7 @@ export const motionHandleMachinery: MotionMachinery = {
 }
 
 export const animationDefinitions: FeatureDefinitions = {
-  animation: { isEnabled: isAnimationEnabled, Feature: AnimationFeature },
+  animation: animationFeatureDefinition,
 }
 
 /**

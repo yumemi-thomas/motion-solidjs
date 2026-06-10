@@ -15,6 +15,7 @@ export {
   createFollowValue,
   createMotionTemplate,
   createMotionValueEvent,
+  createMotionValueSignal,
   createSpring,
   createTime,
   createVelocity,

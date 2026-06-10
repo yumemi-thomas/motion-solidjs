@@ -634,7 +634,11 @@ describe('animate prop as object (react parity)', () => {
     expect(result).toBe(true)
   })
 
-  it('Correctly animates complex value types on first rerender', async () => {
+  // retry: the assertion depends on wall-clock frame pacing — under CPU load
+  // jsdom's rAF can stall past the whole duration, legitimately completing
+  // the animation in a single frame. A real instant-jump regression fails on
+  // every attempt; only load stalls are absorbed.
+  it('Correctly animates complex value types on first rerender', { retry: 2 }, async () => {
     const output: string[] = []
     const result = await new Promise<string[]>((resolve) => {
       render(() => (

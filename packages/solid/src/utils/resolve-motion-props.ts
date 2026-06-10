@@ -1,7 +1,7 @@
 import type { LayoutGroupState } from '@/components/context'
 import type { PresenceContext } from '@/components/animate-presence/presence'
 import type { MotionConfigState } from '@/components/motion-config/types'
-import type { Options } from '@/types'
+import type { ResolvedOptions } from '@/motion/motion-dom-props'
 
 export interface MotionContext {
   layoutGroup: LayoutGroupState
@@ -14,9 +14,9 @@ export interface MotionContext {
  * Shared by motion components and v-motion directive.
  */
 export function resolveMotionProps(
-  props: Options,
+  props: ResolvedOptions,
   context: MotionContext,
-): Options & { presenceContext: PresenceContext } {
+): ResolvedOptions & { presenceContext: PresenceContext } {
   const { layoutGroup, presenceContext, config } = context
 
   const layoutId =

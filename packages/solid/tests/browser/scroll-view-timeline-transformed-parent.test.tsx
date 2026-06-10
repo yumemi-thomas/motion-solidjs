@@ -113,7 +113,7 @@ describe('createScroll + transformed ancestor (regression for #3658)', () => {
 
     return (
       <div ref={(el) => (ref = el)}>
-        <motion.div style={{ clipPath, scale }}>{props.children}</motion.div>
+        <motion.div style={{ 'clip-path': clipPath, scale }}>{props.children}</motion.div>
       </div>
     )
   }

@@ -1,13 +1,21 @@
-export { animate, inView, scroll } from 'motion'
+export { animate, animateMini, distance, distance2D, inView, scroll, scrollInfo } from 'motion'
+// WAAPI-only sequence runner — lives only in the mini bundle upstream.
+export { animateSequence } from 'motion/mini'
 export {
   arc,
   buildTransform,
+  cancelFrame,
   delay,
+  frame,
+  hover,
   isMotionValue,
+  mix,
   motionValue,
+  press,
   resolveMotionValue,
   spring,
   stagger,
+  transform,
   visualElementStore,
 } from 'motion-dom'
 export type {

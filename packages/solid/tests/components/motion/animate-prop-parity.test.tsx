@@ -200,7 +200,7 @@ describe('animate prop as object (react parity)', () => {
       const wrapper = render(() => (
         <motion.div
           animate={{ fontWeight: 100 }}
-          style={{ fontWeight: 'normal' }}
+          style={{ 'font-weight': 'normal' }}
           onAnimationComplete={() => resolve(wrapper.container.firstChild as Element)}
         />
       ))
@@ -439,7 +439,7 @@ describe('animate prop as object (react parity)', () => {
           animate={{ borderRadius: 20 }}
           transition={{ duration: 0.01 }}
           onAnimationComplete={() => resolve(wrapper.container.firstChild as Element)}
-          style={{ borderRadius: '0px' }}
+          style={{ 'border-radius': '0px' }}
         />
       ))
     })

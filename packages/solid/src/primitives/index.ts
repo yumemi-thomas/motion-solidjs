@@ -20,6 +20,7 @@ export {
   createVelocity,
 } from './values'
 export { createTransform } from './create-transform'
+export { createWillChange } from './create-will-change'
 
 // --- Scroll & viewport ---
 export { createScroll } from './create-scroll'
@@ -27,11 +28,14 @@ export type { CreateScrollOptions } from './create-scroll'
 export { ScrollOffset, offsetToViewTimelineRange } from './scroll-offsets'
 export { createInView } from './create-in-view'
 export type { CreateInViewOptions } from './create-in-view'
+export { createPageInView } from './create-page-in-view'
 
 // --- Animation primitives ---
 export { createAnimate } from './create-animate'
 export { createAnimateMini } from './create-animate-mini'
 export { createInstantLayoutTransition } from './create-instant-layout-transition'
+export { createInstantTransition, disableInstantTransitions } from './create-instant-transition'
+export { createResetProjection } from './create-reset-projection'
 export { createReducedMotion } from './create-reduced-motion'
 export { createAnimationFrame, type FrameCallback } from './create-animation-frame'
 export { createCycle, type Cycle, type CycleState } from './create-cycle'

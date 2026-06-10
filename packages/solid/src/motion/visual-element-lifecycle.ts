@@ -1,7 +1,6 @@
 import { isForcedMotionValue, isMotionValue } from 'motion-dom'
 import type { ResolvedValues, VisualElement, VisualElementOptions } from 'motion-dom'
 
-import type { MotionStyleProps } from '@/types'
 import { dashToCamel } from './render-style'
 import { resolveMotionDomProps, type MotionDomOptions } from './motion-dom-props'
 
@@ -41,7 +40,7 @@ function syncForcedStyleValues(
   nextOptions: MotionDomOptions,
 ) {
   if (!visualElement || type === 'svg') return
-  const style: MotionStyleProps | undefined = nextOptions.style
+  const style = nextOptions.style
   if (!style) return
   const motionProps = resolveMotionDomProps(nextOptions)
   for (const key in style) {

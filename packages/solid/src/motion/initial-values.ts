@@ -3,9 +3,10 @@ import type { ResolvedValues } from 'motion-dom'
 
 import type { PresenceContext } from '@/components/animate-presence/presence'
 import type { MotionStateContext, Options, VariantType } from '@/types'
+import type { ResolvedOptions } from './motion-dom-props'
 import { resolveVariant } from './resolve-variant'
 
-export type MotionOptionsWithPresence = Options & {
+export type MotionOptionsWithPresence = ResolvedOptions & {
   presenceContext?: PresenceContext
 }
 
@@ -55,7 +56,7 @@ function resolveInitialVariant(
   return merged as VariantType
 }
 
-export function resolveInitialValues(
+function resolveDefinitionValues(
   options: MotionOptionsWithPresence,
   context?: MotionStateContext,
 ): ResolvedValues {
@@ -78,9 +79,11 @@ export function resolveInitialValues(
       resolveInitialVariant(definition, options.variants, custom, isInitialAnimationBlocked),
     )
   }
+  return resolved
+}
 
+function styleMotionValueSnapshot(style: MotionOptionsWithPresence['style']): ResolvedValues {
   const styleSnapshot: ResolvedValues = {}
-  const style = options.style
   if (style) {
     for (const key in style) {
       const value = style[key]
@@ -89,5 +92,35 @@ export function resolveInitialValues(
       }
     }
   }
-  return { ...styleSnapshot, ...resolved }
+  return styleSnapshot
+}
+
+export function resolveInitialValues(
+  options: MotionOptionsWithPresence,
+  context?: MotionStateContext,
+): ResolvedValues {
+  return {
+    ...styleMotionValueSnapshot(options.style),
+    ...resolveDefinitionValues(options, context),
+  }
+}
+
+/**
+ * Current values of style MotionValues NOT owned by the initial/animate
+ * resolution. Used when a feature bundle arrives after mount (LazyMotion):
+ * the statically rendered MotionValues may have moved since the handle's
+ * creation-time snapshot, so the VisualElement must seed from their current
+ * values — while variant-resolved origins stay untouched (pre-install
+ * renders painted them and the animation feature animates from them).
+ */
+export function resolveLateStyleMotionValues(
+  options: MotionOptionsWithPresence,
+  context?: MotionStateContext,
+): ResolvedValues {
+  const snapshot = styleMotionValueSnapshot(options.style)
+  const owned = resolveDefinitionValues(options, context)
+  for (const key in owned) {
+    delete snapshot[key]
+  }
+  return snapshot
 }

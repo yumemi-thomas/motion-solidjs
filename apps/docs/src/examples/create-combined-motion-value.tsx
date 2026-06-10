@@ -43,7 +43,7 @@ export default function UseCombinedMotionValueExample() {
         dragConstraints={{ left: -80, right: 80, top: -80, bottom: 80 }}
         dragElastic={0.1}
         dragMomentum={false}
-        style={{ x, y, backgroundColor: bg }}
+        style={{ x, y, 'background-color': bg }}
         class="h-14 w-14 cursor-grab rounded-2xl shadow-glow active:cursor-grabbing"
       />
     </div>

@@ -3,6 +3,10 @@ import { createAnimation } from '@/features/animation'
 import { createGestures } from '@/features/gestures/gestures'
 import { isSVGElement } from '@/utils/is'
 import type { MotionHandle } from '@/motion/create-motion'
+import type { MotionMachinery } from '@/motion/machinery'
+import { createPresenceRegistration } from '@/motion/presence-registration'
+import { createStyleWriterLifecycle } from '@/motion/style-writer-lifecycle'
+import { createValueRegistry } from '@/motion/value-registry'
 import type { AsTag } from '@/types'
 
 export function createVisualElement(Component: AsTag, options: any) {
@@ -26,41 +30,27 @@ export type BindingFactory = (
   getOpts: () => MotionHandle['options'],
 ) => (() => void) | undefined
 
-/**
- * A lazy feature is registered by its identifier + a loader that dynamically
- * imports the feature module. The loader is invoked at most once per
- * process; subsequent prop-triggered checks reuse the resolved factory.
- *
- * `triggers` lists the option keys that, when present (truthy), cause this
- * feature to load. Matches motion-dom's per-prop feature-loading idiom but
- * keeps the implementation Solid-native.
- *
- * `dependsOn` lists ids of other lazy entries that must load AND bind to a
- * motion handle before this entry binds. Used for implicit cross-feature
- * dependencies (drag and layout both read `visualElement.projection` at
- * bind-time, so they depend on projection). Listed entries are loaded and
- * bound via the same per-handle `onResolved` callback as the dependent
- * entry — bindFactory is idempotent so duplicate binds from sibling
- * entries (e.g. both drag and layout depending on projection on the same
- * handle) collapse to a single attach.
- */
-export interface LazyFeatureEntry {
-  id: string
-  triggers: ReadonlyArray<string>
-  load: () => Promise<BindingFactory>
-  dependsOn?: ReadonlyArray<string>
-}
-
 export interface FeatureBundle {
   renderer: typeof createVisualElement
   features: Array<BindingFactory>
   /**
-   * Lazily-loaded features. The implementations (drag, layout, projection,
-   * pan) live in separate modules that the bundler emits as on-demand
-   * chunks. Common-path consumers (no drag/layout props) never pay for
-   * those bytes in the initial bundle.
+   * Handle machinery (MotionValue registry, style writer, presence
+   * registration) installed globally when the bundle registers. Bare `m`
+   * ships without it and renders statically until then — mirroring
+   * motion/react — which keeps motion-dom's MotionValue/frameloop out of
+   * the bare-`m` bundle.
    */
-  lazyFeatures?: ReadonlyArray<LazyFeatureEntry>
+  machinery?: MotionMachinery
+}
+
+/**
+ * Shared machinery implementation carried by every feature bundle (domMin /
+ * domAnimation / domMax).
+ */
+export const motionHandleMachinery: MotionMachinery = {
+  createValueRegistry,
+  createStyleWriterLifecycle,
+  createPresenceRegistration,
 }
 
 /**
@@ -79,6 +69,7 @@ export interface FeatureBundle {
 export const domAnimation: FeatureBundle = {
   renderer: createVisualElement,
   features: [createAnimation, createGestures],
+  machinery: motionHandleMachinery,
 }
 
 /**
@@ -96,4 +87,5 @@ export const domAnimation: FeatureBundle = {
 export const domMin: FeatureBundle = {
   renderer: createVisualElement,
   features: [createAnimation],
+  machinery: motionHandleMachinery,
 }

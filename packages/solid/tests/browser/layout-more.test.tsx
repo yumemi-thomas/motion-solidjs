@@ -46,7 +46,7 @@ describe('Layout additional upstream parity', () => {
           left: state() ? '0px' : '200px',
           width: state() ? '100px' : '300px',
           height: state() ? '200px' : '300px',
-          backgroundColor,
+          'background-color': backgroundColor,
         }}
         transition={{ duration: 0.15, ease: () => 0.5 }}
         onLayoutAnimationComplete={() => backgroundColor.set('blue')}

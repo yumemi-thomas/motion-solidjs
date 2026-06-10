@@ -39,7 +39,7 @@ export default function UseComputedExample() {
           dragConstraints={{ left: -90, right: 90, top: -90, bottom: 90 }}
           dragElastic={0.05}
           dragMomentum={false}
-          style={{ x, y, backgroundColor: bg, scale }}
+          style={{ x, y, 'background-color': bg, scale }}
           class="h-12 w-12 cursor-grab rounded-full shadow-glow active:cursor-grabbing"
         />
       </div>

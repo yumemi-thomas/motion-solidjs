@@ -67,7 +67,9 @@ export class PanSession {
   private handlers: Partial<PanSessionHandlers> = {}
   private removeListeners: Function
   private dragSnapToOrigin: boolean | 'x' | 'y'
-  private contextWindow: PanSessionOptions['contextWindow'] = window
+  // Assigned in the constructor (`contextWindow || window`) before any use;
+  // no module-eval `window` default so the class is SSR-safe by construction.
+  private contextWindow: PanSessionOptions['contextWindow']
 
   // Element being dragged. When provided, scroll on its ancestors and window
   // is compensated so the gesture continues smoothly during scroll.

@@ -7,16 +7,24 @@ import {
 } from 'motion-dom'
 import type { HTMLRenderState, ResolvedValues, SVGRenderState } from 'motion-dom'
 
-import type { MotionStyleProps } from '@/types'
+import type { MotionStyleProps, MotionStyleValue } from '@/types'
 import type { MotionProps } from '@/components/motion'
 
-export type MotionStyleValue = MotionStyleProps[string]
+export type { MotionStyleValue } from '@/types'
+
+/**
+ * Internal loose style bag. The public `MotionStyleProps` is strict
+ * (kebab-case csstype + motion shorthands), but the style-building pipeline
+ * mixes kebab-case input keys with motion-dom's camelCase keys, so internal
+ * accumulators are plain string records.
+ */
+export type MotionStyleRecord = Record<string, MotionStyleValue>
 
 function isResolvedValue(value: MotionStyleValue): value is string | number {
   return typeof value === 'string' || typeof value === 'number'
 }
 
-function toResolvedValues(values: MotionStyleProps): ResolvedValues {
+function toResolvedValues(values: MotionStyleRecord): ResolvedValues {
   const resolved: ResolvedValues = {}
   for (const key in values) {
     const value = readMotionValue(values[key])
@@ -50,12 +58,12 @@ export function dashToCamel(str: string) {
 }
 
 export function buildSolidHTMLStyle(
-  latestValues: MotionStyleProps,
+  latestValues: MotionStyleRecord,
   transformTemplate?: MotionProps['transformTemplate'],
-): MotionStyleProps | null {
+): MotionStyleRecord | null {
   const state = createHTMLRenderState()
   buildHTMLStyles(state, toResolvedValues(latestValues), transformTemplate)
-  const result: MotionStyleProps = { ...state.style }
+  const result: MotionStyleRecord = { ...state.style }
   for (const key in state.vars) {
     result[key] = state.vars[key]
   }
@@ -63,14 +71,14 @@ export function buildSolidHTMLStyle(
 }
 
 export function buildSolidSVGAttrs(
-  latestValues: MotionStyleProps,
+  latestValues: MotionStyleRecord,
   tag: string,
   styleProp?: MotionStyleProps,
   transformTemplate?: MotionProps['transformTemplate'],
-): { attrs: Record<string, MotionStyleValue>; style: MotionStyleProps } {
+): { attrs: MotionStyleRecord; style: MotionStyleRecord } {
   const state = createSVGRenderState()
   buildSVGAttrs(state, toResolvedValues(latestValues), isSVGTag(tag), transformTemplate, styleProp)
-  const attrs: Record<string, MotionStyleValue> = {}
+  const attrs: MotionStyleRecord = {}
   for (const key in state.attrs) {
     const attrKey = camelCaseAttributes.has(key) ? key : camelToDash(key)
     attrs[attrKey] = state.attrs[key]

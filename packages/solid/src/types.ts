@@ -4,6 +4,7 @@ import type {
   DOMKeyframesDefinition,
   MotionNodeOptions,
   ResolvedValues,
+  SVGPathProperties,
   TargetAndTransition,
   TransformProperties,
   VariantLabels,
@@ -232,22 +233,30 @@ export interface DragOptions {
   dragSnapToOrigin?: boolean | 'x' | 'y'
 }
 
-type TransformPropertiesWithoutTransition = Omit<TransformProperties, 'transition'>
-type MotionStyleValue = string | number | undefined | MotionValue
-type MotionTransformStyleKey = keyof Omit<
-  VariantType & TransformPropertiesWithoutTransition,
-  'attrX' | 'attrY' | 'attrScale'
->
+export type MotionStyleValue = string | number | undefined | MotionValue
 
-export type MotionStyleProps = Partial<{
-  [K in MotionTransformStyleKey]: MotionStyleValue
-}> &
-  Partial<{
-    [K in Exclude<keyof JSX.CSSProperties, MotionTransformStyleKey>]:
-      | JSX.CSSProperties[K]
-      | MotionValue
-  }> &
-  Record<string, MotionStyleValue>
+/**
+ * Motion-specific style shorthands: transform values (x, y, scale, rotate, …)
+ * and SVG path properties (pathLength, …). These are motion API keys rather
+ * than real CSS properties, so they stay camelCase and accept any animatable
+ * value.
+ */
+type MotionStyleShorthandKey = keyof TransformProperties | keyof SVGPathProperties
+
+/**
+ * Solid-faithful `style` prop: kebab-case CSS properties (Solid's
+ * csstype-based `JSX.CSSProperties`, including `--*` custom properties) plus
+ * motion's transform / SVG-path shorthands. Every value may also be a
+ * `MotionValue`. Unlike motion/react's camelCase `MotionStyle`, camelCase CSS
+ * keys (`backgroundColor`) and unknown properties are rejected.
+ */
+export type MotionStyleProps = {
+  [K in MotionStyleShorthandKey]?: MotionStyleValue
+} & {
+  [K in Exclude<keyof JSX.CSSProperties, MotionStyleShorthandKey>]?:
+    | JSX.CSSProperties[K]
+    | MotionValue
+}
 
 export interface Options<T = any>
   extends LayoutOptions, PressProps, HoverProps, InViewProps, DragProps, PanProps, FocusProps {

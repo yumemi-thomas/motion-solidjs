@@ -32,7 +32,7 @@ describe('focus behavior', () => {
         // mirroring framer's own focus test which reverts `opacity` via a
         // MotionValue with a base. (scale is a transform → reverts to its
         // built-in default with no declared base needed.)
-        style={{ boxShadow: 'none' }}
+        style={{ 'box-shadow': 'none' }}
         transition={{ duration: 0 }}
         data-testid="motion"
       />

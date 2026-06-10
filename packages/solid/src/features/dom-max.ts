@@ -1,5 +1,9 @@
 import { createAnimation } from '@/features/animation'
-import { createVisualElement, type FeatureBundle } from '@/features/dom-animation'
+import {
+  createVisualElement,
+  motionHandleMachinery,
+  type FeatureBundle,
+} from '@/features/dom-animation'
 import { createDrag } from '@/features/gestures/drag'
 import { createGestures } from '@/features/gestures/gestures'
 import { createPan } from '@/features/gestures/pan'
@@ -21,6 +25,7 @@ import { createProjection } from '@/features/layout/projection'
  */
 export const domMax: FeatureBundle = {
   renderer: createVisualElement,
+  machinery: motionHandleMachinery,
   features: [
     createAnimation,
     createGestures,

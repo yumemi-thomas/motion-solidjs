@@ -45,7 +45,7 @@ describe('svg', () => {
       <Motion
         as="path"
         style={{
-          strokeWidth,
+          'stroke-width': strokeWidth,
         }}
         data-testid="path"
       />

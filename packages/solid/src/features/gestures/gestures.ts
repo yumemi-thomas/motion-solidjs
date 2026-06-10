@@ -1,7 +1,6 @@
 import { inView } from 'motion'
-import { isMotionValue } from 'motion-dom'
 import { frame, hover, press } from 'motion-dom'
-import type { AnyResolvedKeyframe, EventInfo, VariantLabels } from 'motion-dom'
+import type { EventInfo, VariantLabels } from 'motion-dom'
 import { createEffect } from 'solid-js'
 
 import { addDomEvent, extractEventInfo } from '@/events'
@@ -163,7 +162,6 @@ function bindPress(state: MotionHandle, getOpts: () => MotionHandle['options']):
 
 function bindFocus(state: MotionHandle, _getOpts: () => MotionHandle['options']): () => void {
   let isFocused = false
-  let focusOrigin: Record<string, AnyResolvedKeyframe> | undefined
   let remove: VoidFunction | undefined
 
   // matches(':focus-visible') throws in browsers without focus-visible support;
@@ -178,32 +176,13 @@ function bindFocus(state: MotionHandle, _getOpts: () => MotionHandle['options'])
       isFocusVisible = true
     }
     if (!isFocusVisible) return
-    focusOrigin = {}
-    const style = state.options.style || {}
-    for (const key in style) {
-      const v = style[key]
-      if (isMotionValue(v)) focusOrigin[key] = v.get()
-    }
     state.setActive('whileFocus', true)
     isFocused = true
   }
 
   const onBlur = () => {
     if (!isFocused) return
-    void state.setActive('whileFocus', false).then(() => {
-      // Focus-restore is the only path in this factory that touches VE;
-      // ensure here so hover/press/inView-only bundles skip the cost.
-      const ve = state.ensureVisualElement()
-      if (focusOrigin && ve) {
-        for (const key in focusOrigin) {
-          const value = ve.getValue(key, focusOrigin[key])
-          value?.jump(focusOrigin[key], false)
-          ve.latestValues[key] = focusOrigin[key]
-        }
-      }
-      ve?.render()
-      focusOrigin = undefined
-    })
+    state.setActive('whileFocus', false)
     isFocused = false
   }
 

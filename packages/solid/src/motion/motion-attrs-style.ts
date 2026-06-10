@@ -82,13 +82,19 @@ function applyHTMLStyleValues(
     const value = styleProp[key]
     const motionKey = dashToCamel(key)
     if (isMotionValue(value)) {
-      state.setStyleMotionValue(motionKey, value)
-    } else if (isForcedStyleMotionValue(motionKey, motionProps)) {
-      // Forced statics render under the motion key so the initial paint has
-      // them inline (react gets this by scraping them into latestValues at
-      // creation); a motion-owned value still wins via the spread order.
+      // The VE self-registers style MotionValues: its constructor and every
+      // `update()` scrape them from props (`scrapeMotionValuesFromProps`).
+      // Without a feature bundle there is no renderer, the VE stays
+      // unconstructed and the MV renders its current value statically —
+      // motion/react parity; the tracked machinery read in `getAttrs`
+      // re-runs this computation on install.
       state.ensureVisualElement()
-      base[motionKey] = value
+    } else if (isForcedStyleMotionValue(motionKey, motionProps)) {
+      // Forced statics render from latestValues (the creation snapshot
+      // scrapes them, mirroring react's makeLatestValues; the VE's update
+      // scrape tracks later changes) — they just need the VE to exist for
+      // baseTarget tracking.
+      state.ensureVisualElement()
     } else {
       base[key] = value
     }
@@ -191,8 +197,9 @@ export function buildMotionAttrs(options: {
     const transformProp = options.props.transform
     if (transformProp !== undefined && svgInput.transform === undefined) {
       svgInput.transform = isMotionValue(transformProp) ? transformProp.get() : transformProp
-      if (isMotionValue(transformProp))
-        options.state.setStyleMotionValue('transform', transformProp)
+      // The SVG VE self-registers MotionValue props (incl. `transform`) via
+      // its scrapeMotionValuesFromProps; it just needs to exist.
+      if (isMotionValue(transformProp)) options.state.ensureVisualElement()
     }
     const { attrs: svgAttrs, style: svgStyle } = buildSolidSVGAttrs(
       svgInput,
@@ -219,8 +226,18 @@ export function cleanStylePropForMotionDom(
   let cleanStyle: MotionStyleRecord | undefined
   for (const key in styleRecord) {
     const motionKey = key.startsWith('--') ? key : dashToCamel(key)
+    const forcedByLayout =
+      (options.layout || options.layoutId !== undefined) &&
+      isForcedStyleMotionValue(motionKey, options)
     if (
       !isMotionValue(styleRecord[key]) &&
+      // Layout-forced values (scale-corrected keys and opacity under
+      // layout/layoutId) stay in motion-dom's style — react passes them
+      // through raw, and the latest-values scrape needs them as the
+      // pre-animation paint/origin. Plain transforms stay filtered when
+      // owned by initial/animate so a style update can't fight the
+      // animation (transforms are "forced" unconditionally upstream).
+      !forcedByLayout &&
       (targetDefinesKey(options.initial, motionKey, options.variants, options.custom) ||
         targetDefinesKey(options.animate, motionKey, options.variants, options.custom))
     ) {

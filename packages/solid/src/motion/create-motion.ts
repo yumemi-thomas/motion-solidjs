@@ -84,7 +84,6 @@ export interface MotionHandle {
   updateFeatures(): void
   initVisualElement(renderer: VisualElementRenderer): void
   ensureVisualElement(): VisualElement<Element> | undefined
-  setStyleMotionValue(key: string, mv: MotionValue): void
 
   // ---- Extension slots (writable) -----------------------------------------
   getSnapshot: GetSnapshotHook
@@ -199,16 +198,6 @@ function createMotionHandle(
   let didUpdate: DidUpdateHook = () => {}
   const type: 'html' | 'svg' = config.type ?? (isSVGElement(options.as) ? 'svg' : 'html')
   const children = new Set<MotionHandle>()
-  const setStyleMotionValue = (key: string, mv: MotionValue): void => {
-    // Without a feature bundle there is no renderer, `ensureVisualElement`
-    // stays undefined and style MotionValues render their current value
-    // statically — motion/react parity. The tracked machinery read in
-    // `getAttrs` re-runs the attrs computation on install, which
-    // re-registers them live. The VE owns the subscription: `addValue`
-    // binds the MV to its render loop.
-    const ve = ensureVisualElement()
-    if (ve && ve.getValue(key) !== mv) ve.addValue(key, mv)
-  }
   const context = createVariantContext(
     () => options,
     () => parent,
@@ -348,7 +337,6 @@ function createMotionHandle(
       handle.getSnapshot(options, undefined)
       options = next
       visualLifecycle.update(next)
-      visualLifecycle.syncForcedStyleValues(next)
       visualLifecycle.render()
       if (next.motionConfig?.isStatic) replayStaticTree()
     })
@@ -468,7 +456,6 @@ function createMotionHandle(
     updateFeatures,
     initVisualElement,
     ensureVisualElement,
-    setStyleMotionValue,
     _staticReplayHook: replayStaticTree,
   }
 
